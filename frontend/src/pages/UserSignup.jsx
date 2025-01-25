@@ -19,21 +19,67 @@ const UserSignup = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+
+  // 
+  // const handleSubmit = (e) => {
+  //   e.preventDefault();
+  //   if (formData.password !== formData.confirmPassword) {
+  //     alert('Passwords do not match');
+  //     return;
+  //   }
+  //   // Signup logic here
+  //   console.log('Signup submitted', formData);
+  // };
+
+  // const handleGoogleSignup = () => {
+  //   // Google signup logic
+  //   console.log('Initiating Google Signup');
+  //   // Implement Google OAuth flow
+  // };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+  
+    // Check if passwords match
     if (formData.password !== formData.confirmPassword) {
       alert('Passwords do not match');
       return;
     }
-    // Signup logic here
-    console.log('Signup submitted', formData);
+  
+    try {
+      const response = await fetch('http://localhost:4000/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: formData.username,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+  
+      const data = await response.json();
+  
+      if (response.ok) {
+        alert('Signup successful!');
+        // Save token to localStorage or cookies (if applicable)
+        localStorage.setItem('token', data.token);
+        // Redirect user to home page
+        window.location.href = '/';
+      } else {
+        // Display error message from backend
+        alert(data.message || 'Signup failed');
+      }
+    } catch (error) {
+      console.error('Error during signup:', error);
+      alert('Something went wrong. Please try again.');
+    }
+  };
+  
+  const handleGoogleSignup = () => {
+    // Redirect to Google OAuth endpoint on the backend
+    window.location.href = 'http://localhost:4000/auth/google';
   };
 
-  const handleGoogleSignup = () => {
-    // Google signup logic
-    console.log('Initiating Google Signup');
-    // Implement Google OAuth flow
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">

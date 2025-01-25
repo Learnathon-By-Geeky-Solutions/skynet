@@ -1,32 +1,114 @@
-const express = require('express')
+require('dotenv').config();
 
-// Sessions, morgan for HTTP requests, mongooes for MongoDB
-// const session = require('express-session');
-// const morgan = require('morgan');
-// const mongoose = require('mongoose');
+const express = require('express')
+// Sessions, morgan for HTTP requests, mongoose for MongoDB
+const mongoose = require('mongoose');
+const session = require('express-session');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const morgan = require('morgan');
+const passport = require('passport');
+const path = require('path');
+
+const routes = require('./routes/routes');
+const { User } = require('./models/schemas');
 
 // express app
 const app = express();
 
+// middleware
+app.use(express.json());
+app.use(morgan('dev'));
+
+app.use(session({
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: true
+})
+);
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+// passport.use(new GoogleStrategy({
+//     clientID: process.env.GOOGLE_CLIENT_ID,
+//     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+//     callbackURL: "http://localhost:4000/auth/google/callback"
+//     }, (accessToken, refreshToken, profile, done) => {
+//         return done(null, profile);
+//     }
+// ));
+// Google OAuth Strategy
+passport.use(new GoogleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: "http://localhost:4000/auth/google/callback",
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        let user = await User.findOne({ googleId: profile.id });
+        if (!user) {
+          user = await User.create({
+            googleId: profile.id,
+            username: profile.displayName,
+            email: profile.emails[0].value,
+          });
+        }
+        return done(null, user);
+      } catch (err) {
+        console.error('Error during Google OAuth:', err);
+        return done(err, null);
+      }
+    }
+  ));
+
+passport.serializeUser((user, done) => done(null, user.id));
+// passport.deserializeUser(async(id, done) => done(null, user));
+passport.deserializeUser(async (id, done) => {
+    try {
+      const user = await User.findById(id);
+      done(null, user);
+    } catch (err) {
+      done(err, null);
+    }
+  });
+
+app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+app.get(
+    '/auth/google/callback',
+    passport.authenticate('google', { failureRedirect: '/login' }),
+    (req, res) => {
+      res.redirect('/'); // Redirect to frontend's home page
+    }
+  );
+  
+app.use((req, res, next) => {
+    console.log(req.path, req.method);
+    next(); 
+});
+
 //routes
-app.get('/', (req, res) => {
-    res.json({mssg: "Welcome!"});
-})
+app.use('/', routes);
 
-// listen for requests
-app.listen(4000, () => {
-    console.log("Listening in PORT:4000");
-})
+// Serve static files from the dist folder
+app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
 
-// mongoose.connect(dbURI)
-//   .then((result)=>{
-//     app.listen(3000, ()=>{
-//         console.log("Server is running on port 3000");
-//     });
-//   })
-//   .catch((err)=>{
-//     console.log(err);
-//   });
+// Catch-all route for React
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'frontend', 'dist', 'index.html'));
+});
+
+// connect to mongodb & listen for requests
+mongoose.connect(process.env.MONGO_URI)
+  .then((result)=>{
+    app.listen(process.env.PORT, () => {
+        console.log(`Connected to DB and Listening on PORT:${process.env.PORT}`);
+    })
+  })
+  .catch((err)=>{
+    console.log(err);
+  });
 
 
 // STATIC FILES FOR IMAGE UPLOADS
@@ -35,13 +117,6 @@ app.listen(4000, () => {
 // app.use(express.static('public'));
 // app.use('/uploads', express.static('uploads'));
 
-// app.use(express.json());
-
-// app.use(session({
-//   secret: 'boring  company',
-//   resave: false,
-//   saveUninitialized: true
-// }));
 
 // // Define error handling middleware
 // function sessionLogout(err, req, res, next) {

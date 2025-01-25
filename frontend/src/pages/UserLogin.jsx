@@ -16,16 +16,50 @@ const UserLogin = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  // const handleSubmit = (e) => {
+  //   e.preventDefault();
+  //   // Login logic here
+  //   console.log('Login submitted', formData);
+  // };
+
+  // const handleGoogleLogin = () => {
+  //   // Google login logic
+  //   console.log('Initiating Google Login');
+  //   // Implement Google OAuth flow
+  // };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Login logic here
-    console.log('Login submitted', formData);
+  
+    try {
+      const response = await fetch('http://localhost:4000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+  
+      const data = await response.json();
+  
+      if (response.ok) {
+        // Login successful
+        alert('Login successful!');
+        // Store the token if needed
+        localStorage.setItem('token', data.token);
+        // Redirect to home page or dashboard
+        window.location.href = '/';
+      } else {
+        // Show specific error message if login fails
+        alert(data.message || 'Login failed');
+      }
+    } catch (error) {
+      console.error('Error during login:', error);
+      alert('Something went wrong. Please try again.');
+    }
   };
 
   const handleGoogleLogin = () => {
-    // Google login logic
-    console.log('Initiating Google Login');
-    // Implement Google OAuth flow
+    // Redirect to Google OAuth endpoint on the backend
+    window.location.href = 'http://localhost:4000/auth/google';
   };
 
   return (
