@@ -1,13 +1,14 @@
 require('dotenv').config();
 
-const express = require('express')
-// Sessions, morgan for HTTP requests, mongoose for MongoDB
+const express = require('express');
 const mongoose = require('mongoose');
 const session = require('express-session');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const morgan = require('morgan');
 const passport = require('passport');
 const path = require('path');
+const cors = require('cors');
+const jwt = require('jsonwebtoken');
 
 const routes = require('./routes/routes');
 const { User } = require('./models/schemas');
@@ -18,80 +19,83 @@ const app = express();
 // middleware
 app.use(express.json());
 app.use(morgan('dev'));
+app.use(cors());
 
+// Session management
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
-  saveUninitialized: true
-})
-);
+  saveUninitialized: true,
+}));
 
+// Passport initialization
 app.use(passport.initialize());
 app.use(passport.session());
 
-// passport.use(new GoogleStrategy({
-//     clientID: process.env.GOOGLE_CLIENT_ID,
-//     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-//     callbackURL: "http://localhost:4000/auth/google/callback"
-//     }, (accessToken, refreshToken, profile, done) => {
-//         return done(null, profile);
-//     }
-// ));
 // Google OAuth Strategy
 passport.use(new GoogleStrategy(
-    {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: "http://localhost:4000/auth/google/callback",
-    },
-    async (accessToken, refreshToken, profile, done) => {
-      try {
-        let user = await User.findOne({ googleId: profile.id });
-        if (!user) {
-          user = await User.create({
-            googleId: profile.id,
-            username: profile.displayName,
-            email: profile.emails[0].value,
-          });
-        }
-        return done(null, user);
-      } catch (err) {
-        console.error('Error during Google OAuth:', err);
-        return done(err, null);
-      }
-    }
-  ));
-
-passport.serializeUser((user, done) => done(null, user.id));
-// passport.deserializeUser(async(id, done) => done(null, user));
-passport.deserializeUser(async (id, done) => {
+  {
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: "http://localhost:4000/auth/google/callback",
+  },
+  async (accessToken, refreshToken, profile, done) => {
     try {
-      const user = await User.findById(id);
-      done(null, user);
+      let user = await User.findOne({ googleId: profile.id });
+      if (!user) {
+        user = await User.create({
+          googleId: profile.id,
+          username: profile.displayName,
+          email: profile.emails[0].value,
+        });
+      }
+      return done(null, user);
     } catch (err) {
-      done(err, null);
+      console.error('Error during Google OAuth:', err);
+      return done(err, null);
     }
-  });
+  }
+));
 
-app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+// Serialize and deserialize the user
+passport.serializeUser((user, done) => done(null, user.id));
 
-app.get(
-    '/auth/google/callback',
-    passport.authenticate('google', { failureRedirect: '/login' }),
-    (req, res) => {
-      res.redirect('/'); // Redirect to frontend's home page
-    }
-  );
-  
-app.use((req, res, next) => {
-    console.log(req.path, req.method);
-    next(); 
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await User.findById(id);
+    done(null, user);
+  } catch (err) {
+    done(err, null);
+  }
 });
 
-//routes
-app.use('/', routes);
+// JWT Token generation
+function createJWT(user) {
+  const payload = {
+    userId: user.id,
+    username: user.username,
+    email: user.email,
+  };
 
-// Serve static files from the dist folder
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+}
+
+// Routes
+app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/login' }), (req, res) => {
+  const token = createJWT(req.user); // Generate JWT token
+  res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' }); // Send token as a cookie
+
+  res.redirect('/'); // Redirect to frontend homepage
+});
+
+app.use((req, res, next) => {
+  console.log(req.path, req.method);
+  next();
+});
+
+// Serve static files
 app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
 
 // Catch-all route for React
@@ -99,14 +103,17 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'dist', 'index.html'));
 });
 
-// connect to mongodb & listen for requests
+// API routes
+app.use('/', routes);
+
+// Connect to MongoDB and start server
 mongoose.connect(process.env.MONGO_URI)
-  .then((result)=>{
+  .then(() => {
     app.listen(process.env.PORT, () => {
-        console.log(`Connected to DB and Listening on PORT:${process.env.PORT}`);
-    })
+      console.log(`Connected to DB and Listening on PORT:${process.env.PORT}`);
+    });
   })
-  .catch((err)=>{
+  .catch((err) => {
     console.log(err);
   });
 

@@ -19,24 +19,6 @@ const UserSignup = () => {
     }));
   };
 
-
-  // 
-  // const handleSubmit = (e) => {
-  //   e.preventDefault();
-  //   if (formData.password !== formData.confirmPassword) {
-  //     alert('Passwords do not match');
-  //     return;
-  //   }
-  //   // Signup logic here
-  //   console.log('Signup submitted', formData);
-  // };
-
-  // const handleGoogleSignup = () => {
-  //   // Google signup logic
-  //   console.log('Initiating Google Signup');
-  //   // Implement Google OAuth flow
-  // };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
   

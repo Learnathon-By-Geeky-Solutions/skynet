@@ -14,6 +14,7 @@ const signup = async (req, res) => {
       const newUser = new User({ username, email, password });
       await newUser.save();
       res.status(201).json({ message: 'Signup successful', user: newUser });
+      
     } catch (err) {
       console.error('Signup error:', err);
       res.status(500).json({ message: 'Error during signup. Please try again later.' });
@@ -21,29 +22,28 @@ const signup = async (req, res) => {
   };
   
   // Login controller
-  const login = async (req, res) => {
-    const { email, password } = req.body;
-  
-    try {
-      const user = await User.findOne({ email });
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-  
-      // Compare password (assuming you've hashed passwords before)
-      const isPasswordValid = await user.comparePassword(password);
-      if (!isPasswordValid) {
-        return res.status(400).json({ message: 'Invalid credentials' });
-      }
-  
-      // Create and send token (assuming you have a method for generating tokens)
-      const token = user.generateAuthToken();  // Generate token logic should be implemented
-      res.status(200).json({ token, message: 'Login successful' });
-    } catch (err) {
-      console.error('Login error:', err);
-      res.status(500).json({ message: 'Error during login. Please try again later.' });
+const login = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    // Find the user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
     }
-  };
+
+    // Compare password directly (no hashing)
+    if (user.password !== password) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    // Login successful, return the user data (without token)
+    res.status(200).json({ message: 'Login successful', user: { id: user._id, username: user.username, email: user.email } });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ message: 'Error during login. Please try again later.' });
+  }
+};
 
 
 // const resetPassword = async (req, res) => {

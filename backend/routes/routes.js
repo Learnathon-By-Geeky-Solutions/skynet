@@ -7,8 +7,8 @@ const {
 
 const router = express.Router();
 
-router.post('/login', login);
-router.post('/signup', signup);
+router.post('/api/auth/login', login);
+router.post('/api/auth/signup', signup);
 // router.post('/resetPassword', resetPassword);
 
 module.exports = router;
