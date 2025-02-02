@@ -93,7 +93,7 @@ const UserLogin = () => {
           </div>
           <button 
             type="submit" 
-            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition duration-300 mb-4"
+            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition duration-300 mb-4 cursor-pointer"
           >
             Login
           </button>
@@ -102,7 +102,7 @@ const UserLogin = () => {
          {/* Google Login Button */}
          <button 
           onClick={handleGoogleLogin}
-          className="w-full flex items-center justify-center bg-white border border-gray-300 text-gray-700 py-2 rounded-md hover:bg-gray-50 transition duration-300"
+          className="w-full flex items-center justify-center bg-white border border-gray-300 text-gray-700 py-2 rounded-md hover:bg-gray-50 transition duration-300 cursor-pointer"
         >
           <Chrome className="mr-2" size={20} />
           Login with Google
