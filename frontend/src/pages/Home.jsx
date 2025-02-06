@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Search, MapPin, Calendar, Users, Building } from 'lucide-react';
 import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
 
 const Home = () => {
   const [searchParams, setSearchParams] = useState({
@@ -117,11 +118,7 @@ const Home = () => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-800 text-white py-8">
-        <div className="container mx-auto px-4 text-center">
-          <p>&copy; 2024 RoomEase. All rights reserved.</p>
-        </div>
-      </footer>
+      <Footer></Footer>
     </div>
   );
 };

@@ -87,7 +87,7 @@ app.get('/auth/google/callback', passport.authenticate('google', { failureRedire
   const token = createJWT(req.user); // Generate JWT token
   res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' }); // Send token as a cookie
 
-  res.redirect('/'); // Redirect to frontend homepage
+  res.redirect(`http://localhost:5173?token=${token}`); // Redirect to frontend homepage
 });
 
 app.use((req, res, next) => {
