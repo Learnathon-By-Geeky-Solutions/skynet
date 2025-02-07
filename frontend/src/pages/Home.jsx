@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Search, MapPin, Calendar, Users, Building } from 'lucide-react';
-import Navbar from '../components/Navbar';
-import Footer from '../components/Footer';
+import Navbar from '../components/Navbar.jsx';
+import Footer from '../components/Footer.jsx';
 
 const Home = () => {
   const [searchParams, setSearchParams] = useState({
