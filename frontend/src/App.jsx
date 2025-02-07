@@ -4,6 +4,9 @@ import AdminLoginPage from './pages/AdminLogin.jsx'
 import UserSignUpPage from './pages/UserSignup.jsx'
 import UserLoginPage from './pages/UserLogin.jsx'
 import AdminDashboard from './pages/AdminDashboard.jsx'
+import UserManagementPage from './pages/AdminUserManagement.jsx'
+import RoomManagementPage from './pages/AdminRoomManagement.jsx'
+import BookingManagementPage from './pages/AdminBookingManagement.jsx'
 import { Routes, Route } from 'react-router-dom';
 
 function App() {
@@ -14,6 +17,9 @@ function App() {
       <Route path="/login" element={<UserLoginPage />} />
       <Route path="/admin/login" element={<AdminLoginPage />} />
       <Route path="/admin/dashboard" element={<AdminDashboard />} />
+      <Route path="/admin/users" element={<UserManagementPage />} />
+      <Route path="/admin/rooms" element={<RoomManagementPage />} />
+      <Route path="/admin/bookings" element={<BookingManagementPage />} />
     </Routes>
 )
 }
