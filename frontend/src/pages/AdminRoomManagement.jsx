@@ -5,6 +5,8 @@ import {
   Trash2, 
   Plus 
 } from 'lucide-react';
+import SideBar from '../components/AdminSideBar.jsx';
+import TopBar from '../components/AdminTopbar.jsx';
 
 const RoomManagementPage = () => {
   const [rooms, setRooms] = useState([
@@ -14,6 +16,15 @@ const RoomManagementPage = () => {
   ]);
 
   return (
+    <div className="flex h-screen bg-gray-100">
+      {/* Sidebar */}
+      <SideBar />
+
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto">
+        {/* Top Bar */}
+        <TopBar />
+
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800 flex items-center">
@@ -68,6 +79,8 @@ const RoomManagementPage = () => {
         </table>
       </div>
     </div>
+  </div>
+</div>
   );
 };
 

@@ -11,18 +11,19 @@ const userSchema = new Schema({
     address: { type: String },
     phone: { type: String },
     birthdate: { type: Date },
+    lastLogin: { type: Date, default: null },
+    role: { type: String, enum: ['User', 'Vendor', 'Admin'], default: 'User' },
+
     // // user's properties
     // wishlist: [{ type: Schema.Types.ObjectId, ref: 'Property' }],
     // notifications: [{ type: Schema.Types.ObjectId, ref: 'Notification' }],
     // bookings: [{ type: Schema.Types.ObjectId, ref: 'Bookings' }],
-    // vendorAuthorization: { type: Boolean, default: false },
 
     // // vendor's properties
     // listings: [{ type: Schema.Types.ObjectId, ref: 'Property' }],
     // earnings: { type: Number, default: 0 },
 
     // // admin's properties
-    adminAuthorization: { type: Boolean, default: false },
     // approvedVendors: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     // approvedListings: [{ type: Schema.Types.ObjectId, ref: 'Property' }]
   }, { timestamps: true });

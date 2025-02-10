@@ -10,8 +10,8 @@ import {
   Bell,
   Search
 } from 'lucide-react';
-import SideBar from '../components/adminSidebar.jsx';
-import TopBar from '../components/adminTopBar.jsx';
+import SideBar from '../components/AdminSideBar.jsx';
+import TopBar from '../components/AdminTopbar.jsx';
 
 const AdminDashboard = () => {
   // Sample data
@@ -29,12 +29,12 @@ const AdminDashboard = () => {
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
-      <SideBar></SideBar>
+      <SideBar />
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
         {/* Top Bar */}
-        <TopBar></TopBar>
+        <TopBar />
 
         {/* Dashboard Content */}
         <div className="p-6">

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+// import { useState } from 'react'
 import Home from './pages/Home.jsx'
 import AdminLoginPage from './pages/AdminLogin.jsx'
 import UserSignUpPage from './pages/UserSignup.jsx'
@@ -7,6 +7,7 @@ import AdminDashboard from './pages/AdminDashboard.jsx'
 import UserManagementPage from './pages/AdminUserManagement.jsx'
 import RoomManagementPage from './pages/AdminRoomManagement.jsx'
 import BookingManagementPage from './pages/AdminBookingManagement.jsx'
+import AuthSuccess from './components/AuthSuccess.jsx'
 import { Routes, Route } from 'react-router-dom';
 
 function App() {
@@ -20,6 +21,7 @@ function App() {
       <Route path="/admin/users" element={<UserManagementPage />} />
       <Route path="/admin/rooms" element={<RoomManagementPage />} />
       <Route path="/admin/bookings" element={<BookingManagementPage />} />
+      <Route path="/auth-success" element={<AuthSuccess />} />
     </Routes>
 )
 }

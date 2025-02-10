@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { User, Mail, Lock, Chrome } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -43,8 +43,10 @@ const UserSignup = () => {
   
       if (response.ok) {
         alert('Signup successful!');
+
         // Save token to localStorage or cookies (if applicable)
-        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+
         // Redirect user to home page
         window.location.href = '/';
       } else {
@@ -57,13 +59,17 @@ const UserSignup = () => {
     }
   };
   
-  const handleGoogleSignup = () => {
+  const handleGoogleSignup = async () => {
     // Redirect to Google OAuth endpoint on the backend
     window.location.href = 'http://localhost:4000/auth/google';
   };
 
 
   return (
+    <>
+    <div className="text-2xl font-bold text-blue-600">
+          <Link to="/">Skynet</Link>
+        </div>
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="bg-white p-8 rounded-lg shadow-md w-96">
         <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Create Account</h2>
@@ -138,6 +144,7 @@ const UserSignup = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

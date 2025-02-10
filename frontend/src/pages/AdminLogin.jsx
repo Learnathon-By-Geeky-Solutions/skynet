@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Lock, User, Chrome } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const AdminLogin = () => {
   const [formData, setFormData] = useState({
@@ -15,11 +16,11 @@ const AdminLogin = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Admin login logic here
-    console.log('Admin Login submitted', formData);
-  };
+  // const handleSubmit = (e) => {
+  //   e.preventDefault();
+  //   // Admin login logic here
+  //   console.log('Admin Login submitted', formData);
+  // };
 
   const handleGoogleLogin = () => {
     // Google login logic for admin
@@ -27,18 +28,67 @@ const AdminLogin = () => {
     // Implement Google OAuth flow with admin-specific validation
   };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+  
+    try {
+      const response = await fetch('http://localhost:4000/api/auth/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+  
+      const data = await response.json();
+  
+      if (response.ok) {
+        // Login successful
+        alert('Login successful!');
+
+        // Store the token if needed
+        localStorage.setItem('user', JSON.stringify(data.user));
+
+        // Redirect to home page or dashboard
+        window.location.href = '/admin/dashboard';
+      } else {
+        // Show specific error message if login fails
+        alert(data.message || 'Login failed');
+      }
+    } catch (error) {
+      console.error('Error during login:', error);
+      alert('Something went wrong. Please try again.');
+    }
+  };
+
+  // const handleGoogleLogin = () => {
+  //   // Redirect to Google OAuth endpoint on the backend
+  //   window.location.href = 'http://localhost:4000/auth/google';
+  // };
+
   return (
+    <>
+    <div className="text-2xl font-bold text-blue-600">
+          <Link to="/">Skynet</Link>
+    </div>
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="bg-white p-8 rounded-lg shadow-md w-96">
         <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Admin Login</h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4 relative">
             <User className="absolute top-3 left-3 text-gray-400" size={20} />
-            <input
+            {/* <input
               type="text"
               name="username"
               placeholder="Admin Username"
               value={formData.username}
+              onChange={handleChange}
+              className="w-full pl-10 pr-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            /> */}
+            <input
+              type="email"
+              name="email"
+              placeholder="Admin Email"
+              value={formData.email}
               onChange={handleChange}
               className="w-full pl-10 pr-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
@@ -77,6 +127,7 @@ const AdminLogin = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Mail, Lock, Chrome } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -43,8 +43,10 @@ const UserLogin = () => {
       if (response.ok) {
         // Login successful
         alert('Login successful!');
-        // Store the token if needed
-        localStorage.setItem('token', data.token);
+
+        // Store user data correctly in localStorage
+        localStorage.setItem('user', JSON.stringify(data.user));
+
         // Redirect to home page or dashboard
         window.location.href = '/';
       } else {
@@ -57,12 +59,16 @@ const UserLogin = () => {
     }
   };
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
     // Redirect to Google OAuth endpoint on the backend
     window.location.href = 'http://localhost:4000/auth/google';
   };
 
   return (
+    <>
+    <div className="text-2xl font-bold text-blue-600">
+          <Link to="/">Skynet</Link>
+    </div>
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="bg-white p-8 rounded-lg shadow-md w-96">
         <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">User Login</h2>
@@ -109,11 +115,13 @@ const UserLogin = () => {
         </button>
 
         <div className="text-center mt-4 space-y-2">
+        <Link to="/admin/login" className="text-blue-600 hover:underline block">Admin Login</Link>
           <a href="#" className="text-blue-600 hover:underline block">Forgot Password?</a>
           <Link to="/signup" className="text-blue-600 hover:underline block">Create an Account</Link>
         </div>
       </div>
     </div>
+    </>
   );
 };
 

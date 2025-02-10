@@ -20,7 +20,7 @@
 // export default Navbar;
 
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 const Navbar = () => {
@@ -30,15 +30,12 @@ const Navbar = () => {
 
   useEffect(() => {
     // Check if the user is logged in by looking for a token in localStorage
-    const token = localStorage.getItem('token');
-    if (token) {
+    const user = JSON.parse(localStorage.getItem('user'));
+    
+    if (user) {
       setIsLoggedIn(true);
 
-      // If the token exists, fetch user data (e.g., username)
-      // Here, you could make an API request to get the user's details
-      // For now, assume the username is stored in localStorage as well
-      const storedUsername = localStorage.getItem('username');
-      setUsername(storedUsername || 'User'); // Use the stored username or default to 'User'
+      setUsername(user.username || 'User'); // Use the stored username or default to 'User'
     } else {
       setIsLoggedIn(false);
     }
@@ -46,8 +43,7 @@ const Navbar = () => {
 
   const handleLogout = () => {
     // Clear user data from localStorage
-    localStorage.removeItem('token');
-    localStorage.removeItem('username');
+    localStorage.removeItem('user');
     setIsLoggedIn(false);
     setUsername("");
     navigate('/login'); // Redirect to login page after logout

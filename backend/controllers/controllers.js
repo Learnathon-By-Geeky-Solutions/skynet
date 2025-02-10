@@ -11,7 +11,8 @@ const signup = async (req, res) => {
         return res.status(400).json({ message: 'Email already in use' });
       }
   
-      const newUser = new User({ username, email, password });
+      const newUser = new User({ username, email, password, lastLogin: new Date() });
+
       await newUser.save();
       res.status(201).json({ message: 'Signup successful', user: newUser });
       
@@ -21,7 +22,7 @@ const signup = async (req, res) => {
     }
   };
   
-  // Login controller
+// Login controller
 const login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -37,14 +38,62 @@ const login = async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
+    if (user.role == 'Admin') {
+      return res.status(400).json({ message: 'Please Use Admin Login' });
+    }
+
+    // Update last login timestamp
+    user.lastLogin = new Date();
+    await user.save();
+
     // Login successful, return the user data (without token)
-    res.status(200).json({ message: 'Login successful', user: { id: user._id, username: user.username, email: user.email } });
+    res.status(200).json({ message: 'Login successful', user: user });
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ message: 'Error during login. Please try again later.' });
   }
 };
 
+// adminLogin controller
+const adminLogin = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    // Find the user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Compare password directly (no hashing)
+    if (user.password !== password) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    if (user.role !== "Admin") {
+      return res.status(400).json({ message: 'User not authorized' });
+    }
+
+    // Update last login timestamp
+    user.lastLogin = new Date();
+    await user.save();
+
+    // Login successful, return the user data (without token)
+    res.status(200).json({ message: 'Login successful', user: user });
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ message: 'Error during login. Please try again later.' });
+  }
+};
+
+const getUsers = async (req, res) => {
+  try {
+    const users = await User.find();
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 // const resetPassword = async (req, res) => {
 //     try {
@@ -86,5 +135,7 @@ module.exports = {
     
     signup,
     login,
+    adminLogin,
+    getUsers,
     // resetPassword,
 };

@@ -16,16 +16,28 @@ const { User } = require('./models/schemas');
 // express app
 const app = express();
 
+// app.use(cors());
+// CORS Middleware (Allow frontend at port 5173)
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true, // Allow cookies & authentication
+}));
+
 // middleware
 app.use(express.json());
 app.use(morgan('dev'));
-app.use(cors());
+
 
 // Session management
 app.use(session({
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: true,
+  // cookie: {
+  //   secure: process.env.NODE_ENV === 'production', // Secure in production
+  //   httpOnly: true,
+  //   sameSite: 'lax',
+  // },
 }));
 
 // Passport initialization
@@ -47,6 +59,7 @@ passport.use(new GoogleStrategy(
           googleId: profile.id,
           username: profile.displayName,
           email: profile.emails[0].value,
+          lastLogin: new Date(),
         });
       }
       return done(null, user);
@@ -69,31 +82,42 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
-// JWT Token generation
-function createJWT(user) {
-  const payload = {
-    userId: user.id,
-    username: user.username,
-    email: user.email,
-  };
+// // JWT Token generation
+// function createJWT(user) {
+//   const payload = {
+//     userId: user.id,
+//     username: user.username,
+//     email: user.email,
+//   };
 
-  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
-}
+//   return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+// }
 
 // Routes
 app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/login' }), (req, res) => {
-  const token = createJWT(req.user); // Generate JWT token
-  res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' }); // Send token as a cookie
+  // const token = createJWT(req.user); // Generate JWT token
+  // res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' }); // Send token as a cookie
+  const user = req.user;
 
-  res.redirect(`http://localhost:5173?token=${token}`); // Redirect to frontend homepage
+  if (!user) {
+    return res.redirect('http://localhost:5173/login?error=GoogleAuthFailed');
+  }
+
+  // Redirect to frontend with user details in query params
+  res.redirect(`http://localhost:5173/auth-success?user=${encodeURIComponent(JSON.stringify(user))}`);
+
 });
 
 app.use((req, res, next) => {
   console.log(req.path, req.method);
   next();
 });
+
+// API routes
+app.use('/', routes);
+
 
 // Serve static files
 app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
@@ -102,9 +126,6 @@ app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'dist', 'index.html'));
 });
-
-// API routes
-app.use('/', routes);
 
 // Connect to MongoDB and start server
 mongoose.connect(process.env.MONGO_URI)

@@ -1,21 +1,39 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Users, 
   Edit, 
   Trash2, 
   Plus 
 } from 'lucide-react';
-import SideBar from '../components/adminSidebar.jsx';
-import tTopBar from '../components/adminTopBar.jsx';
+import SideBar from '../components/AdminSideBar.jsx';
+import TopBar from '../components/AdminTopbar.jsx';
 
 const UserManagementPage = () => {
-  const [users, setUsers] = useState([
-    { id: 1, name: "John Doe", email: "john@example.com", role: "Admin", lastLogin: "2024-02-15" },
-    { id: 2, name: "Jane Smith", email: "jane@example.com", role: "Manager", lastLogin: "2024-02-14" },
-    { id: 3, name: "Mike Johnson", email: "mike@example.com", role: "Staff", lastLogin: "2024-02-13" },
-  ]);
+  // const [users, setUsers] = useState([
+  //   { id: 1, name: "John Doe", email: "john@example.com", role: "Admin", lastLogin: "2024-02-15" },
+  //   { id: 2, name: "Jane Smith", email: "jane@example.com", role: "Manager", lastLogin: "2024-02-14" },
+  //   { id: 3, name: "Mike Johnson", email: "mike@example.com", role: "Staff", lastLogin: "2024-02-13" },
+  // ]);
+
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+    fetch('http://localhost:4000/api/users')
+      .then((response) => response.json())
+      .then((data) => setUsers(data))
+      .catch((error) => console.error('Error fetching Users:', error));
+  }, []);
+
 
   return (
+    <div className="flex h-screen bg-gray-100">
+      {/* Sidebar */}
+      <SideBar />
+
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto">
+        {/* Top Bar */}
+        <TopBar />
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800 flex items-center">
@@ -35,19 +53,18 @@ const UserManagementPage = () => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Login</th>
-              <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
             {users.map(user => (
-              <tr key={user.id}>
-                <td className="px-6 py-4">{user.id}</td>
-                <td className="px-6 py-4">{user.name}</td>
+              <tr key={user._id}>
+                <td className="px-6 py-4">{user._id}</td>
+                <td className="px-6 py-4">{user.username}</td>
                 <td className="px-6 py-4">{user.email}</td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 rounded-full text-xs ${
                     user.role === 'Admin' ? 'bg-red-100 text-red-800' : 
-                    user.role === 'Manager' ? 'bg-blue-100 text-blue-800' : 
+                    user.role === 'Vendor' ? 'bg-blue-100 text-blue-800' : 
                     'bg-green-100 text-green-800'
                   }`}>
                     {user.role}
@@ -68,6 +85,8 @@ const UserManagementPage = () => {
         </table>
       </div>
     </div>
+  </div>
+</div>
   );
 };
 
