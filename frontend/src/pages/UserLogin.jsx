@@ -42,7 +42,7 @@ const UserLogin = () => {
   
       if (response.ok) {
         // Login successful
-        alert('Login successful!');
+        // alert('Login successful!');
 
         // Store user data correctly in localStorage
         localStorage.setItem('user', JSON.stringify(data.user));

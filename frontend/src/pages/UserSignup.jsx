@@ -42,7 +42,7 @@ const UserSignup = () => {
       const data = await response.json();
   
       if (response.ok) {
-        alert('Signup successful!');
+        // alert('Signup successful!');
 
         // Save token to localStorage or cookies (if applicable)
         localStorage.setItem('user', JSON.stringify(data.user));

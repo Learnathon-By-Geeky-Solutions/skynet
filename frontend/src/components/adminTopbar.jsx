@@ -38,8 +38,9 @@ const AdmintTopBar = () => {
           </div>
           <div className="flex items-center space-x-4">
             <button className="relative">
-              <Bell size={20} />
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+              {/* <Bell size={20} /> */}
+              <Link to="/admin/requests" className="text-gray-700 hover:text-blue-600 mr-4">Requests</Link>
+              <span className="absolute top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
                 3
               </span>
             </button>

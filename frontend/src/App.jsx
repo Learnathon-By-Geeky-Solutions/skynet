@@ -7,6 +7,7 @@ import AdminDashboard from './pages/AdminDashboard.jsx'
 import UserManagementPage from './pages/AdminUserManagement.jsx'
 import RoomManagementPage from './pages/AdminRoomManagement.jsx'
 import BookingManagementPage from './pages/AdminBookingManagement.jsx'
+import VendorRequestPage from './pages/AdminVendorRequests.jsx'
 import AuthSuccess from './components/AuthSuccess.jsx'
 import { Routes, Route } from 'react-router-dom';
 
@@ -21,6 +22,7 @@ function App() {
       <Route path="/admin/users" element={<UserManagementPage />} />
       <Route path="/admin/rooms" element={<RoomManagementPage />} />
       <Route path="/admin/bookings" element={<BookingManagementPage />} />
+      <Route path="/admin/requests" element={<VendorRequestPage />} />
       <Route path="/auth-success" element={<AuthSuccess />} />
     </Routes>
 )
