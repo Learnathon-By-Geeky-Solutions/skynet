@@ -49,7 +49,7 @@ passport.use(new GoogleStrategy(
   {
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: "http://localhost:4000/auth/google/callback",
+    callbackURL: `http://localhost:${process.env.PORT}/auth/google/callback`,
   },
   async (accessToken, refreshToken, profile, done) => {
     try {
@@ -117,7 +117,6 @@ app.use((req, res, next) => {
 
 // API routes
 app.use('/', routes);
-
 
 // Serve static files
 app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));

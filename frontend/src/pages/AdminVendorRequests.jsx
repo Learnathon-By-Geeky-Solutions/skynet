@@ -6,23 +6,34 @@ import {
 } from 'lucide-react';
 import SideBar from '../components/AdminSideBar.jsx';
 import TopBar from '../components/AdminTopbar.jsx';
+import axios from 'axios';
 
 const VendorRequestPage = () => {
-  const [users, setUsers] = useState([
-    { id: 1, name: "John Doe", email: "john@example.com", role: "Admin", lastLogin: "2024-02-15", request:"hi" },
-    { id: 2, name: "Jane Smith", email: "jane@example.com", role: "Vendor", lastLogin: "2024-02-14", request:"hola" },
-    { id: 3, name: "Mike Johnson", email: "mike@example.com", role: "Staff", lastLogin: "2024-02-13", request:"bonjour" },
-  ]);
-
-//   const [users, setUsers] = useState([]);
-
-//   useEffect(() => {
-//     fetch('http://localhost:4000/api/users')
-//       .then((response) => response.json())
-//       .then((data) => setUsers(data))
-//       .catch((error) => console.error('Error fetching Users:', error));
-//   }, []);
-
+  const handleAction = async (requestId, action) => {
+    try {
+      const response = await axios.put("http://localhost:4000/api/vendorRequest/update", {
+        requestId,
+        action
+      });
+  
+      if (response.status === 200) {
+        // Remove the request from state after successful update
+        setRequests(prevRequests => prevRequests.filter(req => req._id !== requestId));
+      }
+    } catch (error) {
+      console.error("Error updating request:", error);
+    }
+  };
+  
+  const [requests, setRequests] = useState([])
+  useEffect(() => {
+    fetch('http://localhost:4000/api/vendorRequests')
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("Fetched vendor requests:", data);//
+        setRequests(data)})
+      .catch((error) => console.error('Error fetching requests:', error));
+  }, []) 
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -49,34 +60,37 @@ const VendorRequestPage = () => {
           <thead className="bg-gray-50 border-b">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Request</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {users.map(user => (
-              <tr key={user.id}>
-                <td className="px-6 py-4">{user.id}</td>
-                <td className="px-6 py-4">{user.name}</td>
-                <td className="px-6 py-4">{user.email}</td>
+            {requests.map(request => (
+              <tr key={request._id}>
+                <td className="px-6 py-4">{request.userID._id}</td>
+                <td className="px-6 py-4">{request.userID.username}</td>
+                <td className="px-6 py-4">{request.userID.email}</td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 rounded-full text-xs ${
-                    user.role === 'Admin' ? 'bg-red-100 text-red-800' : 
-                    user.role === 'Vendor' ? 'bg-blue-100 text-blue-800' : 
+                    request.userID.role === 'Admin' ? 'bg-red-100 text-red-800' : 
+                    request.userID.role === 'Vendor' ? 'bg-blue-100 text-blue-800' : 
                     'bg-green-100 text-green-800'
                   }`}>
-                    {user.role}
+                    {request.userID.role}
                   </span>
                 </td>
-                <td className="px-6 py-4">{user.request}</td>
+                <td className="px-6 py-4">{request.message}</td>
                 <td className="px-6 py-4 flex justify-center space-x-2">
-                  <button className="text-green-600 hover:text-green-800 cursor-pointer">
+                  <button className="text-green-600 hover:text-green-800 cursor-pointer"
+                  onClick = {() => {handleAction(request._id, "approve")}}>
                     <Check size={20} />
                   </button>
-                  <button className="text-red-600 hover:text-red-800 cursor-pointer">
+                  <button className="text-red-600 hover:text-red-800 cursor-pointer" 
+                  onClick = {() => {handleAction(request._id, "reject")}}>
                     <X size={20} />
+                    
                   </button>
                 </td>
               </tr>

@@ -1,4 +1,5 @@
 const { User } = require('../models/schemas');
+const { VendorRequest } = require("../models/vendorRequestSchema");
 
 
 // Signup controller
@@ -129,13 +130,69 @@ const getUsers = async (req, res) => {
 //         res.status(500).json({ error: 'Internal server error' });
 //     }
 // };
+const vendorRequests = async(req, res) => {
+  try {
+    const { userID, message, timestamp} = req.body;
+
+    if (!userID || !message){
+      return res.status(400).json({error: "UserID and message are required"})
+    }
+
+  const newRequest = new VendorRequest({ userID, message, timestamp });
+  await newRequest.save();
+  res.status(201).json({message: "Message saved successfully!", data: newRequest});
+  } catch (error) {
+      console.error("Error saving request", error);
+      res.status(500).json({error: "Internal Server Error"});
+  }
+};
+
+const getVendorRequests = async(req, res) => {
+  try {
+    const requests = await VendorRequest.find().populate("userID", "username email role");
+    res.status(200).json(requests);
+  } catch (error) {
+    console.error("Error fetching requests", error);
+    res.status(500).json("Internal Server Error")
+  }
+};
+
+const updateVendorRequest = async (req, res) => {
+  const { requestId, action } = req.body;
+
+  try {
+    if (action === "approve") {
+      // Find the request and update the user's role to "Vendor"
+      const request = await VendorRequest.findById(requestId);
+      if (!request) return res.status(404).json({ message: "Request not found" });
+
+      await User.findByIdAndUpdate(request.userID, { role: "Vendor" });
+      await VendorRequest.findByIdAndDelete(requestId); // Remove the request after approval
+
+      return res.status(200).json({ message: "User role updated to Vendor and request removed" });
+
+    } else if (action === "reject") {
+      // Just remove the request from the database
+      await VendorRequest.findByIdAndDelete(requestId);
+      return res.status(200).json({ message: "Request removed" });
+
+    } else {
+      return res.status(400).json({ message: "Invalid action" });
+    }
+  } catch (error) {
+    console.error("Error updating request:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
 
 
 module.exports = {
-    
-    signup,
-    login,
-    adminLogin,
-    getUsers,
-    // resetPassword,
+  signup,
+  login,
+  adminLogin,
+  getUsers,
+  // resetPassword,
+  vendorRequests,
+  getVendorRequests,
+  updateVendorRequest,
 };
