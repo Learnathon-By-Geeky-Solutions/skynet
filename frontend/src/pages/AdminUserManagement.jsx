@@ -5,8 +5,8 @@ import {
   Trash2, 
   Plus 
 } from 'lucide-react';
-import SideBar from '../components/AdminSideBar.jsx';
-import TopBar from '../components/AdminTopbar.jsx';
+import SideBar from '../components/adminSideBar.jsx';
+import TopBar from '../components/adminTopbar.jsx';
 
 const UserManagementPage = () => {
   // const [users, setUsers] = useState([
@@ -18,7 +18,7 @@ const UserManagementPage = () => {
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
-    fetch('http://localhost:4000/api/users')
+    fetch('http://localhost:4000/api/admin/getUsers')
       .then((response) => response.json())
       .then((data) => setUsers(data))
       .catch((error) => console.error('Error fetching Users:', error));
@@ -48,7 +48,7 @@ const UserManagementPage = () => {
         <table className="w-full">
           <thead className="bg-gray-50 border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+              {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th> */}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
@@ -58,7 +58,7 @@ const UserManagementPage = () => {
           <tbody className="divide-y divide-gray-200">
             {users.map(user => (
               <tr key={user._id}>
-                <td className="px-6 py-4">{user._id}</td>
+                {/* <td className="px-6 py-4">{user._id}</td> */}
                 <td className="px-6 py-4">{user.username}</td>
                 <td className="px-6 py-4">{user.email}</td>
                 <td className="px-6 py-4">

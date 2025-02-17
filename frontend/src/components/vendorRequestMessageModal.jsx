@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { X } from 'lucide-react';
+import PropTypes from 'prop-types';
 
 
 const MessageModal = ({ isOpen, onClose, onSubmit }) => {
@@ -45,4 +46,10 @@ const MessageModal = ({ isOpen, onClose, onSubmit }) => {
     );
   };
 
-  export default MessageModal;
+MessageModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,  // Must be a boolean
+  onClose: PropTypes.func.isRequired, // Must be a function
+  onSubmit: PropTypes.func.isRequired // Must be a function
+};
+
+export default MessageModal;

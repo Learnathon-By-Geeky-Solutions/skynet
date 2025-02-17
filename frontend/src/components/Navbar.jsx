@@ -1,30 +1,10 @@
-// import React from "react";
-// import { Link } from "react-router-dom";
-
-// const Navbar = () => {
-//     return(
-//         <header className="bg-white shadow-md">
-//             <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-//                 <div className="text-2xl font-bold text-blue-600"><Link to="/">Skynet</Link></div>
-//                 <nav className="space-x-4">
-//                 <Link to="/" className="text-gray-700 hover:text-blue-600">Home</Link>
-//                 <a href="#" className="text-gray-700 hover:text-blue-600">Bookings</a>
-//                 <a href="#" className="text-gray-700 hover:text-blue-600">About</a>
-//                 <a href="#" className="text-gray-700 hover:text-blue-600">Contact</a>
-//                 </nav>
-//             </div>
-//         </header>
-//     )
-// }
-
-// export default Navbar;
-
 
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu} from 'lucide-react';
 import MessageModal from "./vendorRequestMessageModal.jsx";
 import axios from "axios";
+import Notifications from './Notifications';
 
 const Navbar = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -32,6 +12,7 @@ const Navbar = () => {
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   const [user, setUser] = useState(null);
   const [username, setUsername] = useState("");
+  const [isPending, setIsPending] = useState(false);
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
 
@@ -83,13 +64,15 @@ const Navbar = () => {
     }
   
     try {
+      setIsPending(true);
+
       const messageData = {
-        userID: user._id, // Store only userId
+        requesterID: user._id, // Store only userId
         message: message,
         timestamp: { type: Date, default: Date.now },
       };
   
-      const response = await axios.post("http://localhost:4000/api/auth/admin/requests", messageData, {
+      const response = await axios.post("http://localhost:4000/api/admin/postVendorRequests", messageData, {
         headers: { "Content-Type": "application/json" },
       });
   
@@ -97,6 +80,7 @@ const Navbar = () => {
       // You can add a success notification or refresh the message list here
     } catch (error) {
       console.error("Error sending message:", error.response?.data || error.message);
+      setIsPending(false);
     }
   };
 
@@ -135,6 +119,7 @@ const Navbar = () => {
                 <div ref={dropdownRef} className="relative inline-block">
                   <div className="flex items-center space-x-2">
                     <span className="text-gray-700">Hello, {username}</span>
+                    <Notifications userId={user._id} />
                     <button
                       onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                       className="p-1 rounded-full hover:bg-gray-100 transition-colors duration-200"
@@ -146,12 +131,21 @@ const Navbar = () => {
                   {isDropdownOpen && (
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
                       {user?.role === "User" && (
-                        <button
-                          onClick={handleSendRequest}
-                          className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-blue-600 cursor-pointer"
-                        > 
-                          Send Request
-                        </button>
+                        isPending || user?.pendingStatus === "pending" ? (
+                          <button
+                            className="block w-full text-left px-4 py-2 text-gray-500 bg-gray-100 cursor-not-allowed"
+                            disabled
+                          >
+                            Processing Request
+                          </button>
+                        ) : (
+                          <button
+                            onClick={handleSendRequest}
+                            className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 hover:text-blue-600 cursor-pointer"
+                          >
+                            Send Request
+                          </button>
+                        )
                       )}
                       <button
                         onClick={() => {

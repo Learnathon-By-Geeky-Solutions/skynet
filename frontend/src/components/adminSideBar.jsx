@@ -25,7 +25,11 @@ const AdminSideBar = () => {
     return (
         <div className="w-64 bg-white shadow-md">
             <div className="p-4">
-            <h1 className="text-2xl font-bold text-blue-600">Skynet</h1>
+            <Link to="/admin/dashboard" 
+            className={`text-2xl font-bold text-blue-600 hover:underline ${location.pathname === '/admin/dashboard' ? 'bg-blue-50 text-blue-600' : 'bg-blue-50 text-blue-600'}`}
+            >
+                Skynet
+            </Link>
             <p className="text-gray-500">Admin Panel</p>
             </div>
 

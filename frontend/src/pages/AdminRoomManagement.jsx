@@ -5,8 +5,8 @@ import {
   Trash2, 
   Plus 
 } from 'lucide-react';
-import SideBar from '../components/AdminSideBar.jsx';
-import TopBar from '../components/AdminTopbar.jsx';
+import SideBar from '../components/adminSideBar.jsx';
+import TopBar from '../components/adminTopbar.jsx';
 
 const RoomManagementPage = () => {
   const [rooms, setRooms] = useState([

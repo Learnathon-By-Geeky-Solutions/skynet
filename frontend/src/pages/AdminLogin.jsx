@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 
 const AdminLogin = () => {
   const [formData, setFormData] = useState({
+    email: '',
     username: '',
     password: ''
   });

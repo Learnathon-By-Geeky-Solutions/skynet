@@ -10,8 +10,10 @@ const path = require('path');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 
-const routes = require('./routes/routes');
-const { User } = require('./models/schemas');
+const unlogRoutes = require('./routes/unlogRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const userRoutes = require('./routes/userRoutes');
+const { User } = require('./models/userSchemas');
 
 // express app
 const app = express();
@@ -60,6 +62,9 @@ passport.use(new GoogleStrategy(
           username: profile.displayName,
           email: profile.emails[0].value,
           lastLogin: new Date(),
+          role: 'User',
+          notifications: [],
+          approvedVendors: [],
         });
       }
       return done(null, user);
@@ -93,6 +98,8 @@ passport.deserializeUser(async (id, done) => {
 //   return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 // }
 
+
+
 // Routes
 app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
@@ -116,7 +123,10 @@ app.use((req, res, next) => {
 });
 
 // API routes
-app.use('/', routes);
+app.use('/api/auth', unlogRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/user', userRoutes);
+
 
 // Serve static files
 app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
@@ -125,6 +135,7 @@ app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'dist', 'index.html'));
 });
+
 
 // Connect to MongoDB and start server
 mongoose.connect(process.env.MONGO_URI)

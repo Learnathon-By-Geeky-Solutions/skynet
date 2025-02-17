@@ -2,6 +2,13 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 
+
+const notificationSchema = new mongoose.Schema({
+  message: String,
+  read: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now }
+});
+
 const userSchema = new Schema({
     username: { type: String, required: true },
     email: { type: String, required: true, unique: true },
@@ -14,18 +21,23 @@ const userSchema = new Schema({
     lastLogin: { type: Date, default: null },
     role: { type: String, enum: ['User', 'Vendor', 'Admin'], default: 'User' },
 
+
     // // user's properties
     // wishlist: [{ type: Schema.Types.ObjectId, ref: 'Property' }],
-    // notifications: [{ type: Schema.Types.ObjectId, ref: 'Notification' }],
+    pendingStatus: { type: String, enum: ['pending', 'not_pending'], default: 'not_pending' },
+    notifications: [ notificationSchema ],
     // bookings: [{ type: Schema.Types.ObjectId, ref: 'Bookings' }],
+
 
     // // vendor's properties
     // listings: [{ type: Schema.Types.ObjectId, ref: 'Property' }],
     // earnings: { type: Number, default: 0 },
 
+
     // // admin's properties
-    // approvedVendors: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    approvedVendors: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     // approvedListings: [{ type: Schema.Types.ObjectId, ref: 'Property' }]
+
   }, { timestamps: true });
 
 

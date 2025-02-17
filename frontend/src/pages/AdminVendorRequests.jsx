@@ -1,17 +1,34 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { 
   Users, 
   Check, 
   X
 } from 'lucide-react';
-import SideBar from '../components/AdminSideBar.jsx';
-import TopBar from '../components/AdminTopbar.jsx';
+import SideBar from '../components/adminSideBar.jsx';
+import TopBar from '../components/adminTopbar.jsx';
 import axios from 'axios';
+import { RequestContext } from "../context/RequestContext";  // Import context
 
 const VendorRequestPage = () => {
+  const [requests, setRequests] = useState([])
+  const { requestCount, setRequestCount } = useContext(RequestContext); // Get global state
+
+
+  useEffect(() => {
+    fetch('http://localhost:4000/api/admin/getVendorRequests')
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("Fetched vendor requests:", data);//
+        setRequestCount(data.length);  // Update global state
+        setRequests(data);
+      })
+      .catch((error) => console.error('Error fetching requests:', error));
+  }, []);
+
+
   const handleAction = async (requestId, action) => {
     try {
-      const response = await axios.put("http://localhost:4000/api/vendorRequest/update", {
+      const response = await axios.put("http://localhost:4000/api/admin/updateVendorRequests", {
         requestId,
         action
       });
@@ -19,21 +36,15 @@ const VendorRequestPage = () => {
       if (response.status === 200) {
         // Remove the request from state after successful update
         setRequests(prevRequests => prevRequests.filter(req => req._id !== requestId));
+
+        // Decrease request count in global state
+        setRequestCount(prevCount => Math.max(prevCount - 1, 0));
       }
     } catch (error) {
       console.error("Error updating request:", error);
     }
   };
   
-  const [requests, setRequests] = useState([])
-  useEffect(() => {
-    fetch('http://localhost:4000/api/vendorRequests')
-      .then((response) => response.json())
-      .then((data) => {
-        console.log("Fetched vendor requests:", data);//
-        setRequests(data)})
-      .catch((error) => console.error('Error fetching requests:', error));
-  }, []) 
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -59,26 +70,27 @@ const VendorRequestPage = () => {
         <table className="w-full">
           <thead className="bg-gray-50 border-b">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+              {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th> */}
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Request</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase text-center"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
             {requests.map(request => (
               <tr key={request._id}>
-                <td className="px-6 py-4">{request.userID._id}</td>
-                <td className="px-6 py-4">{request.userID.username}</td>
-                <td className="px-6 py-4">{request.userID.email}</td>
+                {/* <td className="px-6 py-4">{request.requesterID._id}</td> */}
+                <td className="px-6 py-4">{request.requesterID.username}</td>
+                <td className="px-6 py-4">{request.requesterID.email}</td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 rounded-full text-xs ${
-                    request.userID.role === 'Admin' ? 'bg-red-100 text-red-800' : 
-                    request.userID.role === 'Vendor' ? 'bg-blue-100 text-blue-800' : 
+                    request.requesterID.role === 'Admin' ? 'bg-red-100 text-red-800' : 
+                    request.requesterID.role === 'Vendor' ? 'bg-blue-100 text-blue-800' : 
                     'bg-green-100 text-green-800'
                   }`}>
-                    {request.userID.role}
+                    {request.requesterID.role}
                   </span>
                 </td>
                 <td className="px-6 py-4">{request.message}</td>

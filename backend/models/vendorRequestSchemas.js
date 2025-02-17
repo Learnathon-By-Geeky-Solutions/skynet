@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
-const messageSchema = new Schema({
-  userID: {
+const requestSchema = new Schema({
+  requesterID: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',  // References the User model
     required: true
@@ -22,5 +22,5 @@ const messageSchema = new Schema({
   }
 });
 
-const VendorRequest = mongoose.model('Vendor_Request', messageSchema);
+const VendorRequest = mongoose.model('Vendor_Request', requestSchema);
 module.exports = { VendorRequest };
