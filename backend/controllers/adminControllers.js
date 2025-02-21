@@ -1,10 +1,11 @@
 const { User } = require('../models/userSchemas');
 const { VendorRequest } = require("../models/vendorRequestSchemas");
+const mongoose = require('mongoose');
 
 
 const getUsers = async (req, res) => {
   try {
-    const users = await User.find();
+    const users = await User.find().select("username email role lastLogin");
     res.json(users);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -18,7 +19,7 @@ const getVendorRequests = async(req, res) => {
     res.status(200).json(requests);
   } catch (error) {
     console.error("Error fetching requests", error);
-    res.status(500).json("Internal Server Error")
+    res.status(500).json({ message: "Internal Server Error" })
   }
 };
 
@@ -35,67 +36,86 @@ const getVendorRequests = async(req, res) => {
 // };
 
 
-const postVendorRequests = async(req, res) => {
-  try {
-    const { requesterID, message } = req.body;
+const postVendorRequests = async(req, res) => {  
+  try {  
+    const { requesterID, message } = req.body;  
 
-    if (!requesterID || !message){
-      return res.status(400).json({error: "requesterID and message are required"})
-    }
+    if (!requesterID || !message || !mongoose.Types.ObjectId.isValid(requesterID)){  
+      return res.status(400).json({error: "requesterID and message are required"})  
+    }  
 
-    await User.findByIdAndUpdate(requesterID, { pendingStatus: 'pending' });
+    const session = await mongoose.startSession();  
+    session.startTransaction();  
+    await User.findByIdAndUpdate(requesterID, { pendingStatus: 'pending' });  
 
-    const newRequest = new VendorRequest({ requesterID, message });
-    await newRequest.save();
-    res.status(201).json({message: "Message saved successfully!", data: newRequest});
+    const newRequest = new VendorRequest({ requesterID, message });  
+    await newRequest.save();  
+    await session.commitTransaction();  
+    res.status(201).json({message: "Message saved successfully!", data: newRequest});  
     
-  } catch (error) {
-      console.error("Error saving request", error);
-      res.status(500).json({error: "Internal Server Error"});
-  }
-};
+  } catch (error) {  
+      if (session) {  
+        await session.abortTransaction();  
+      }  
+      console.error("Error saving request", error);  
+      res.status(500).json({error: "Internal Server Error"});  
+  }  
+};  
 
-const updateVendorRequests = async (req, res) => {
-  const { requestId, action } = req.body;
+const updateVendorRequests = async (req, res) => {  
+  const { requestId, action } = req.body;  
+  let session;  
 
-  try {
-    const request = await VendorRequest.findById(requestId);
-    if (!request) return res.status(404).json({ message: "Request not found" });
+  if (!requestId || !mongoose.Types.ObjectId.isValid(requestId)) {  
+    return res.status(400).json({ message: "Invalid request ID" });  
+  }  
 
-    const userId = request.requesterID;
-    let notificationMessage = "";
+  try {  
+    session = await mongoose.startSession();  
+    session.startTransaction();  
 
-    if (action === "approve") {
-      // Update user's role and pending status
-      await User.findByIdAndUpdate(userId, { role: "Vendor", pendingStatus: "not_pending" });
+    const request = await VendorRequest.findById(requestId);  
+    if (!request) return res.status(404).json({ message: "Request not found" });  
 
-      notificationMessage = "Your vendor request has been approved! 🎉";
+    const userId = request.requesterID;  
+    // let notificationMessage = "";  
 
-    } else if (action === "reject") {
-      // Update user's pending status
-      await User.findByIdAndUpdate(userId, { pendingStatus: "not_pending" });
+    if (action === "approve") {  
+      await User.findByIdAndUpdate(  
+        userId,  
+        {  
+          role: "Vendor",  
+          pendingStatus: "not_pending",  
+          $push: { notifications: { message: "Your vendor request has been approved! 🎉", read: false } }  
+        },  
+        { session }  
+      );  
+    } else if (action === "reject") {  
+      await User.findByIdAndUpdate(  
+        userId,  
+        {  
+          pendingStatus: "not_pending",  
+          $push: { notifications: { message: "Your vendor request has been rejected. ❌", read: false } }  
+        },  
+        { session }  
+      );  
+    } else {  
+      return res.status(400).json({ message: "Invalid action" });  
+    }  
 
-      notificationMessage = "Your vendor request has been rejected. ❌";
+    await VendorRequest.findByIdAndDelete(requestId).session(session);  
+    await session.commitTransaction();  
 
-    } else {
-      return res.status(400).json({ message: "Invalid action" });
-    }
+    return res.status(200).json({ message: "Request processed, user updated, and notification saved" });  
+  } catch (error) {  
+    if (session) {  
+      await session.abortTransaction();  
+    }  
+    console.error("Error updating request:", error);  
+    res.status(500).json({ message: "Internal Server Error" });  
+  }  
+};  
 
-    // Push notification directly into user's notifications array
-    await User.findByIdAndUpdate(userId, {
-      $push: { notifications: { message: notificationMessage, read: false } }
-    });
-
-    // Remove the request from VendorRequest
-    await VendorRequest.findByIdAndDelete(requestId);
-
-    return res.status(200).json({ message: "Request processed, user updated, and notification saved" });
-
-  } catch (error) {
-    console.error("Error updating request:", error);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-};
 
 
 // const updateVendorRequests = async (req, res) => {

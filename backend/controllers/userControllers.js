@@ -1,11 +1,14 @@
 const { User } = require('../models/userSchemas');
+const mongoose = require('mongoose');
 
 
 // Get unread notification count (without authentication middleware)
 const getUnreadNotifCount = async (req, res) => {
     try {
         const { userId } = req.query;
-        if (!userId) return res.status(400).json({ error: 'User ID required' });
+        if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {  
+            return res.status(400).json({ error: 'Valid User ID required' });  
+        }  
 
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ error: 'User not found' });
@@ -21,7 +24,9 @@ const getUnreadNotifCount = async (req, res) => {
 const getNotifs = async (req, res) => {
     try {
         const { userId } = req.query;
-        if (!userId) return res.status(400).json({ error: 'User ID required' });
+        if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {  
+            return res.status(400).json({ error: 'Valid User ID required' });  
+        } 
 
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ error: 'User not found' });
@@ -36,7 +41,9 @@ const getNotifs = async (req, res) => {
 const putReadNotifs = async (req, res) => {
     try {
         const { userId } = req.body;
-        if (!userId) return res.status(400).json({ error: 'User ID required' });
+        if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {  
+            return res.status(400).json({ error: 'Valid User ID required' });  
+        } 
 
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ error: 'User not found' });

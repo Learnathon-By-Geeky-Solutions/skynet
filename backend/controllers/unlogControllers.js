@@ -1,18 +1,38 @@
 const { User } = require('../models/userSchemas');
-
+const bcrypt = require("bcrypt");
+const rateLimit = require('express-rate-limit');
 
 // Signup controller
 const signup = async (req, res) => {
     const { username, email, password } = req.body;
+    
+    // Input validation
+    if (!username || !email || !password) {
+        return res.status(400).json({ message: 'All fields are required' });
+    }
+    
+    if (password.length < 8) {
+        return res.status(400).json({ message: 'Password must be at least 8 characters' });
+    }
+    
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+        return res.status(400).json({ message: 'Invalid email format' });
+    }
   
     try {
-      const existingUser = await User.findOne({ email });
+      const existingUser = await User.findOne({ email: email.toLowerCase() });
       if (existingUser) {
         return res.status(400).json({ message: 'Email already in use' });
       }
-  
-      const newUser = new User({ username, email, password, lastLogin: new Date() });
 
+      // const hashedPassword = await bcrypt.hash(password, 10);
+      const newUser = new User({ 
+        username, 
+        email: email.toLowerCase(), 
+        password,
+        lastLogin: new Date() 
+      });
+      
       await newUser.save();
       res.status(201).json({ message: 'Signup successful', user: newUser });
       
@@ -20,21 +40,31 @@ const signup = async (req, res) => {
       console.error('Signup error:', err);
       res.status(500).json({ message: 'Error during signup. Please try again later.' });
     }
-  };
+};
   
+// Add rate limiting middleware  
+const loginLimiter = rateLimit({  
+  windowMs: 15 * 60 * 1000, // 15 minutes  
+  max: 5 // limit each IP to 5 requests per windowMs  
+}); 
+
 // Login controller
 const login = async (req, res) => {
   const { email, password } = req.body;
-
+    
+    if (!email || !password) {  
+      return res.status(400).json({ message: 'All fields required' });  
+    }
   try {
     // Find the user by email
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Compare password directly (no hashing)
-    if (user.password !== password) {
+    // Compare password (with hashing)
+    const isMatch = await bcrypt.compare(password, user.password);  
+    if (!isMatch) {  
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
@@ -60,13 +90,14 @@ const adminLogin = async (req, res) => {
 
   try {
     // Find the user by email
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Compare password directly (no hashing)
-    if (user.password !== password) {
+    // Compare password (with hashing)
+    const isMatch = await bcrypt.compare(password, user.password);  
+    if (!isMatch) { 
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 

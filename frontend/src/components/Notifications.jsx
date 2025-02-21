@@ -52,7 +52,7 @@ const Notifications = ({ userId }) => {
 
     return (
         <div className="relative">
-            <button onClick={toggleDropdown} className="relative p-2 bg-gray-800 text-white rounded-full">
+            <button onClick={toggleDropdown} className="relative p-2 bg-gray-800 text-white rounded-full cursor-pointer">
                 🔔
                 {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
