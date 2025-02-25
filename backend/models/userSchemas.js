@@ -1,70 +1,90 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 const bcrypt = require('bcrypt');
+mongoose.set('strictQuery', true);
 
-
-const notificationSchema = new mongoose.Schema({
+const notificationSchema = new Schema({
   message: {
     type: String,
     required: true,
     trim: true,
     maxlength: [500, 'Notification message too long']
+  },
+  read: { 
+    type: Boolean, 
+    default: false 
   }
 });
 
 const userSchema = new Schema({
-    username: { type: String, required: true },
-    email: { 
-      type: String, 
-      required: true, 
-      unique: true,
-      lowercase: true,
-      trim: true,
-      match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email']
-    },
-    password: { 
-      type: String,
-      required: function() { return !this.googleId; },
-      minlength: [8, 'Password must be at least 8 characters']
-    },
-    googleId: { type: String }, // For Google OAuth users
-    bio: { type: String },
-    address: { type: String, trim: true },
-    phone: { 
-      type: String,
-      match: [/^\+?[\d\s-]{10,}$/, 'Please enter a valid phone number']
-    },
-    birthdate: { type: Date },
-    lastLogin: { type: Date, default: null },
-    role: { type: String, enum: ['User', 'Vendor', 'Admin'], default: 'User' },
+  username: { type: String, required: true, trim: true },
+  email: { 
+    type: String, 
+    required: true, 
+    unique: true,
+    lowercase: true,
+    trim: true,
+    index: true, 
+    match: [/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]+\.[a-zA-Z]{2,}$/, 'Please enter a valid email']
+  },
+  
+  password: { 
+    type: String,
+    required: function() { return !this.googleId; }, 
+    minlength: [8, 'Password must be at least 8 characters'],
+    select: false, 
+  },
 
-    // // user's properties
-    // wishlist: [{ type: Schema.Types.ObjectId, ref: 'Property' }],
-    pendingStatus: { type: String, enum: ['pending', 'not_pending'], default: 'not_pending' },
-    notifications: [ notificationSchema ],
-    // bookings: [{ type: Schema.Types.ObjectId, ref: 'Bookings' }],
+  googleId: { type: String, trim: true }, // ✅ Trim to avoid empty string issues
+  bio: { type: String, trim: true, maxlength: 500 },
+  address: { type: String, trim: true },
+  phone: { 
+    type: String,
+    trim: true,
+    match: [/^\+?[1-9]\d{9,14}$/, 'Please enter a valid phone number']
+  },
+  birthdate: { type: Date },
+  lastLogin: { type: Date, default: null },
+  role: { 
+    type: String, 
+    enum: ['user', 'vendor', 'admin'], 
+    default: 'user',
+    lowercase: true 
+  },
 
-    // // vendor's properties
-    // listings: [{ type: Schema.Types.ObjectId, ref: 'Property' }],
-    // earnings: { type: Number, default: 0 },
+  pendingStatus: { type: String, enum: ['pending', 'not_pending'], default: 'not_pending' },
+  notifications: {
+    type: [notificationSchema],
+    validate: [arrayLimit, '{PATH} exceeds the limit of 50']
+  },
+  approvedVendors: [{ type: Schema.Types.ObjectId, ref: 'User' }],
 
-    // // admin's properties
-    approvedVendors: [{ type: Schema.Types.ObjectId, ref: 'User' }],
-    // approvedListings: [{ type: Schema.Types.ObjectId, ref: 'Property' }]
 }, { timestamps: true });
 
+
 userSchema.pre('save', async function(next) {
-  if (this.isModified('password')) {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
+  if (this.role) {
+    this.role = this.role.toLowerCase();
   }
+
+  if (this.googleId) {
+    this.password = undefined; // Ensure no empty password is stored
+  } else if (this.isModified('password') && this.password) { 
+    if (!this.password.startsWith('$2b$')) { // Avoid rehashing
+      this.password = await bcrypt.hash(this.password, 10);
+    }
+  }
+
   next();
 });
+
+// ✅ Helper function to limit notifications
+function arrayLimit(val) {
+  return val.length <= 50;
+}
 
 // mongoose capitalize the collection name and add an 's' to the end of the model name
 // so the collection name for User will be 'users',  another example is Property will be 'properties'
 const User = mongoose.model('User', userSchema);
 
-module.exports = {
-    User,
-};
+module.exports = { User };

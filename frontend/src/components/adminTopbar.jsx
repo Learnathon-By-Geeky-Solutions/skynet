@@ -12,20 +12,31 @@ import {
   Search
 } from 'lucide-react';
 import { RequestContext } from "../context/RequestContext";  // Import context
+import axios from "axios";
 
 const AdminTopBar = () => {
 
-    const [username, setUsername] = useState("");
+    const [user, setUser] = useState("");
     const { requestCount } = useContext(RequestContext);
   
-    useEffect(() => {
-      // Get username from localStorage
-      const user = JSON.parse(localStorage.getItem("user"));
-      if (user) {
-        setUsername(user.username || "Admin User");
+    // Fetch user data from backend on mount
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await axios.get("http://localhost:4000/api/auth/me", {
+          withCredentials: true,
+        });
+        if (response.data) {
+          setUser(response.data.user);
+        }
+      } catch (error) {
+        setUser(null);
+        console.error("Auth error:", error.response?.data || error.message);
       }
-  
-    }, []);
+    };
+    
+    fetchUser();
+  }, []);
 
 
     return (
@@ -51,7 +62,7 @@ const AdminTopBar = () => {
           </button>
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-blue-500 rounded-full"></div>
-            <span className="font-medium">{username}</span>
+            <span className="font-medium">{user.username}</span>
           </div>
         </div>
       </div>

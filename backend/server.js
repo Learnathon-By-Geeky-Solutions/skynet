@@ -2,49 +2,50 @@ require('dotenv').config();
 
 const express = require('express');
 const mongoose = require('mongoose');
-const session = require('express-session');
+const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const morgan = require('morgan');
-const passport = require('passport');
 const path = require('path');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
 
 const unlogRoutes = require('./routes/unlogRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const userRoutes = require('./routes/userRoutes');
 const { User } = require('./models/userSchemas');
 
-// express app
+// Express app
 const app = express();
 
-// app.use(cors());
+// Middleware
+app.use(express.json());
+app.use(cookieParser()); // Parse cookies
+app.use(morgan('dev'));
+
 // CORS Middleware (Allow frontend at port 5173)
 app.use(cors({
   origin: 'http://localhost:5173',
   credentials: true, // Allow cookies & authentication
 }));
 
-// middleware
-app.use(express.json());
-app.use(morgan('dev'));
+// Ensure Express allows credentials in responses
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Credentials", "true");
+  next();
+});
 
+// JWT Token generation
+function createJWT(user) {
+  const payload = {
+    userId: user.id,
+    username: user.username,
+    email: user.email,
+    role: user.role
+  };
 
-// Session management
-app.use(session({
-  secret: process.env.SESSION_SECRET,
-  resave: false,
-  saveUninitialized: true,
-  // cookie: {
-  //   secure: process.env.NODE_ENV === 'production', // Secure in production
-  //   httpOnly: true,
-  //   sameSite: 'lax',
-  // },
-}));
-
-// Passport initialization
-app.use(passport.initialize());
-app.use(passport.session());
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+}
 
 // Google OAuth Strategy
 passport.use(new GoogleStrategy(
@@ -87,46 +88,64 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
-// // JWT Token generation
-// function createJWT(user) {
-//   const payload = {
-//     userId: user.id,
-//     username: user.username,
-//     email: user.email,
-//   };
-
-//   return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
-// }
-
-
-
-// Routes
+// Google OAuth Routes
 app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
-app.get('/auth/google/callback', passport.authenticate('google', { failureRedirect: '/login' }), (req, res) => {
-  // const token = createJWT(req.user); // Generate JWT token
-  // res.cookie('token', token, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict' }); // Send token as a cookie
-  const user = req.user;
+app.get(
+  "/auth/google/callback",
+  passport.authenticate("google", { failureRedirect: "/login", session: false }),
+  async (req, res) => {
+    if (!req.user) {
+      return res.redirect("http://localhost:5173/login?error=GoogleAuthFailed");
+    }
 
-  if (!user) {
-    return res.redirect('http://localhost:5173/login?error=GoogleAuthFailed');
+    try {
+      // ✅ Update lastLogin field
+      await User.findByIdAndUpdate(req.user._id, { lastLogin: new Date() });
+
+      // Generate JWT Token
+      const token = createJWT(req.user);
+
+      // Set token as HTTP-only cookie
+      res.cookie("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 3600000, // 1 hour
+      });
+
+      // Redirect to frontend
+      res.redirect("http://localhost:5173/auth-success");
+    } catch (error) {
+      console.error("Error updating lastLogin:", error);
+      res.redirect("http://localhost:5173/login?error=ServerError");
+    }
+  }
+);
+
+// Middleware to protect routes
+function authenticateJWT(req, res, next) {
+  const token = req.cookies.token;
+
+  if (!token) {
+    return res.status(401).json({ message: 'Unauthorized: No token provided' });
   }
 
-  // Redirect to frontend with user details in query params
-  res.redirect(`http://localhost:5173/auth-success?user=${encodeURIComponent(JSON.stringify(user))}`);
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ message: err.message === 'jwt expired' ? 'Session expired, please log in again' : 'Unauthorized: Invalid token' });
+    }
+    // console.log("✅ User from Token:", user); // Debugging
+    req.user = user;
+    next();
+  });
+}
 
-});
 
-app.use((req, res, next) => {
-  console.log(req.path, req.method);
-  next();
-});
-
-// API routes
+// API routes (protected routes example)
 app.use('/api/auth', unlogRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/user', userRoutes);
-
+app.use('/api/admin', authenticateJWT, adminRoutes); // Protected
+app.use('/api/user', authenticateJWT, userRoutes);  // Protected
 
 // Serve static files
 app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
@@ -135,7 +154,6 @@ app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'dist', 'index.html'));
 });
-
 
 // Connect to MongoDB and start server
 mongoose.connect(process.env.MONGO_URI)
@@ -147,8 +165,6 @@ mongoose.connect(process.env.MONGO_URI)
   .catch((err) => {
     console.log(err);
   });
-
-
 // STATIC FILES FOR IMAGE UPLOADS
 // app.use(morgan('dev'));
 // app.use(express.urlencoded({ extended:true }));

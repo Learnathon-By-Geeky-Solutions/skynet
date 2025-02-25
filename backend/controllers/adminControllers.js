@@ -1,25 +1,38 @@
 const { User } = require('../models/userSchemas');
 const { VendorRequest } = require("../models/vendorRequestSchemas");
 const mongoose = require('mongoose');
+const jwt = require("jsonwebtoken");
 
 
 const getUsers = async (req, res) => {
   try {
-    const users = await User.find().select("username email role lastLogin");
-    res.json(users);
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    
+    const filter = req.query.role ? { role: req.query.role } : {};
+
+    const users = await User.find(filter)
+      .select("username email role lastLogin")
+      .sort({ lastLogin: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.json({ success: true, data: users });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ success: false, error: error.message });
   }
 };
 
 
-const getVendorRequests = async(req, res) => {
+const getVendorRequests = async (req, res) => {
   try {
     const requests = await VendorRequest.find().populate("requesterID", "username email role");
-    res.status(200).json(requests);
+    
+    res.status(200).json({ success: true, data: requests }); // ✅ Standardized Response
   } catch (error) {
-    console.error("Error fetching requests", error);
-    res.status(500).json({ message: "Internal Server Error" })
+    console.error("Error fetching vendor requests:", error);
+    res.status(500).json({ success: false, message: "Internal Server Error" }); // ✅ Consistent Error Format
   }
 };
 
@@ -36,85 +49,104 @@ const getVendorRequests = async(req, res) => {
 // };
 
 
-const postVendorRequests = async(req, res) => {  
-  try {  
-    const { requesterID, message } = req.body;  
+// Secure route: Post Vendor Requests
+const postVendorRequests = async (req, res) => {
+  const session = await mongoose.startSession(); // Start transaction session
+  session.startTransaction();
+  
+  try {
+      const requesterID = req.user.userId; // Extract user ID from authenticated token
+      const { message } = req.body;
 
-    if (!requesterID || !message || !mongoose.Types.ObjectId.isValid(requesterID)){  
-      return res.status(400).json({error: "requesterID and message are required"})  
-    }  
+      if (!message) {
+          return res.status(400).json({ error: "Message is required" });
+      }
 
-    const session = await mongoose.startSession();  
-    session.startTransaction();  
-    await User.findByIdAndUpdate(requesterID, { pendingStatus: 'pending' });  
+      // Update user's pending status
+      await User.findByIdAndUpdate(requesterID, { pendingStatus: "pending" });
 
-    const newRequest = new VendorRequest({ requesterID, message });  
-    await newRequest.save();  
-    await session.commitTransaction();  
-    res.status(201).json({message: "Message saved successfully!", data: newRequest});  
-    
-  } catch (error) {  
-      if (session) {  
-        await session.abortTransaction();  
-      }  
-      console.error("Error saving request", error);  
-      res.status(500).json({error: "Internal Server Error"});  
-  }  
-};  
+      // Save vendor request
+      const newRequest = new VendorRequest({ requesterID, message });
+      await newRequest.save({ session }); // Ensure transaction consistency
 
-const updateVendorRequests = async (req, res) => {  
-  const { requestId, action } = req.body;  
-  let session;  
+      await session.commitTransaction();
+      res.status(201).json({ message: "Message saved successfully!", data: newRequest });
 
-  if (!requestId || !mongoose.Types.ObjectId.isValid(requestId)) {  
-    return res.status(400).json({ message: "Invalid request ID" });  
-  }  
+  } catch (error) {
+      await session.abortTransaction(); // Rollback on error
+      console.error("Error saving request", error);
+      res.status(500).json({ error: "Internal Server Error" });
+  } finally {
+      session.endSession(); // Clean up session
+  }
+};
 
-  try {  
-    session = await mongoose.startSession();  
-    session.startTransaction();  
 
-    const request = await VendorRequest.findById(requestId);  
-    if (!request) return res.status(404).json({ message: "Request not found" });  
 
-    const userId = request.requesterID;  
-    // let notificationMessage = "";  
+const updateVendorRequests = async (req, res) => {
+  const { requestId, action } = req.body;
+  const adminUser = req.user; // Get logged-in user from JWT middleware
+  let session;
 
-    if (action === "approve") {  
-      await User.findByIdAndUpdate(  
-        userId,  
-        {  
-          role: "Vendor",  
-          pendingStatus: "not_pending",  
-          $push: { notifications: { message: "Your vendor request has been approved! 🎉", read: false } }  
-        },  
-        { session }  
-      );  
-    } else if (action === "reject") {  
-      await User.findByIdAndUpdate(  
-        userId,  
-        {  
-          pendingStatus: "not_pending",  
-          $push: { notifications: { message: "Your vendor request has been rejected. ❌", read: false } }  
-        },  
-        { session }  
-      );  
-    } else {  
-      return res.status(400).json({ message: "Invalid action" });  
-    }  
+  // 🛑 Validate request ID
+  if (!requestId || !mongoose.Types.ObjectId.isValid(requestId)) {
+    return res.status(400).json({ message: "Invalid request ID" });
+  }
 
-    await VendorRequest.findByIdAndDelete(requestId).session(session);  
-    await session.commitTransaction();  
+  // 🛑 Ensure the user is an admin
+  if (!adminUser || adminUser.role !== "admin") {
+    return res.status(403).json({ message: "Unauthorized: Admin access required" });
+  }
 
-    return res.status(200).json({ message: "Request processed, user updated, and notification saved" });  
-  } catch (error) {  
-    if (session) {  
-      await session.abortTransaction();  
-    }  
-    console.error("Error updating request:", error);  
-    res.status(500).json({ message: "Internal Server Error" });  
-  }  
-};  
+  try {
+    session = await mongoose.startSession();
+    session.startTransaction();
+
+    // 🔍 Find vendor request
+    const request = await VendorRequest.findById(requestId).session(session).exec();
+    if (!request) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ message: "Request not found" });
+    }
+
+    const userId = request.requesterID;
+    let updateFields = { pendingStatus: "not_pending" };
+
+    if (action === "approve") {
+      updateFields.role = "Vendor";
+      updateFields.$push = { notifications: { message: "Your vendor request has been approved! 🎉", read: false } };
+    } else if (action === "reject") {
+      updateFields.$push = { notifications: { message: "Your vendor request has been rejected. ❌", read: false } };
+    } else {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(400).json({ message: "Invalid action" });
+    }
+
+    // 🏗️ Update user role & notifications
+    const userUpdate = await User.findByIdAndUpdate(userId, updateFields, { session, new: true }).exec();
+    if (!userUpdate) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // 🗑️ Delete vendor request after processing
+    await VendorRequest.findByIdAndDelete(requestId).session(session).exec();
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(200).json({ message: "Request processed, user updated, and notification saved" });
+  } catch (error) {
+    if (session) {
+      await session.abortTransaction();
+      session.endSession();
+    }
+    console.error("❌ Error updating request:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
 
 
 

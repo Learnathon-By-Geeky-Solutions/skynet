@@ -10,8 +10,8 @@ import {
   Bell,
   Search
 } from 'lucide-react';
-import SideBar from '../components/AdminSideBar.jsx';
-import TopBar from '../components/AdminTopbar.jsx';
+import SideBar from '../components/adminSideBar.jsx';
+import TopBar from '../components/adminTopbar.jsx';
 
 const AdminDashboard = () => {
   // Sample data

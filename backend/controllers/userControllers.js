@@ -1,14 +1,25 @@
 const { User } = require('../models/userSchemas');
 const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
 
+// Middleware to verify JWT and extract userId
+const verifyUser = (req, res) => {
+    try {
+        const token = req.cookies.token;
+        if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
-// Get unread notification count (without authentication middleware)
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        return decoded.userId;
+    } catch (error) {
+        return null;
+    }
+};
+
+// Get unread notification count
 const getUnreadNotifCount = async (req, res) => {
     try {
-        const { userId } = req.query;
-        if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {  
-            return res.status(400).json({ error: 'Valid User ID required' });  
-        }  
+        const userId = verifyUser(req, res);
+        if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ error: 'User not found' });
@@ -20,13 +31,11 @@ const getUnreadNotifCount = async (req, res) => {
     }
 };
 
-// Get all notifications (without authentication middleware)
+// Get all notifications
 const getNotifs = async (req, res) => {
     try {
-        const { userId } = req.query;
-        if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {  
-            return res.status(400).json({ error: 'Valid User ID required' });  
-        } 
+        const userId = verifyUser(req, res);
+        if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ error: 'User not found' });
@@ -37,13 +46,11 @@ const getNotifs = async (req, res) => {
     }
 };
 
-// Mark notifications as read (without authentication middleware)
+// Mark notifications as read
 const putReadNotifs = async (req, res) => {
     try {
-        const { userId } = req.body;
-        if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {  
-            return res.status(400).json({ error: 'Valid User ID required' });  
-        } 
+        const userId = verifyUser(req, res);
+        if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ error: 'User not found' });
@@ -56,7 +63,6 @@ const putReadNotifs = async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 };
-
 
 module.exports = {
     putReadNotifs,

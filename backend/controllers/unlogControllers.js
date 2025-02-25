@@ -1,162 +1,164 @@
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 const { User } = require('../models/userSchemas');
-const bcrypt = require("bcrypt");
-const rateLimit = require('express-rate-limit');
+const mongoose = require('mongoose');
 
-// Signup controller
-const signup = async (req, res) => {
-    const { username, email, password } = req.body;
-    
-    // Input validation
-    if (!username || !email || !password) {
-        return res.status(400).json({ message: 'All fields are required' });
-    }
-    
-    if (password.length < 8) {
-        return res.status(400).json({ message: 'Password must be at least 8 characters' });
-    }
-    
-    if (!/^\S+@\S+\.\S+$/.test(email)) {
-        return res.status(400).json({ message: 'Invalid email format' });
-    }
-  
-    try {
-      const existingUser = await User.findOne({ email: email.toLowerCase() });
-      if (existingUser) {
-        return res.status(400).json({ message: 'Email already in use' });
-      }
+function createJWT(user) {
+  const payload = {
+    userId: user.id,
+    username: user.username,
+    email: user.email,
+    role: user.role,
+  };
 
-      // const hashedPassword = await bcrypt.hash(password, 10);
-      const newUser = new User({ 
-        username, 
-        email: email.toLowerCase(), 
-        password,
-        lastLogin: new Date() 
-      });
-      
-      await newUser.save();
-      res.status(201).json({ message: 'Signup successful', user: newUser });
-      
-    } catch (err) {
-      console.error('Signup error:', err);
-      res.status(500).json({ message: 'Error during signup. Please try again later.' });
-    }
-};
-  
-// Add rate limiting middleware  
-const loginLimiter = rateLimit({  
-  windowMs: 15 * 60 * 1000, // 15 minutes  
-  max: 5 // limit each IP to 5 requests per windowMs  
-}); 
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
+}
 
-// Login controller
+// Login Controller
 const login = async (req, res) => {
-  const { email, password } = req.body;
-    
-    if (!email || !password) {  
-      return res.status(400).json({ message: 'All fields required' });  
-    }
   try {
-    // Find the user by email
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const { email, password } = req.body;
+    const user = await User.findOne({ email }).select('+password'); // Ensure password is selected
+
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Compare password (with hashing)
-    const isMatch = await bcrypt.compare(password, user.password);  
-    if (!isMatch) {  
-      return res.status(400).json({ message: 'Invalid credentials' });
-    }
+    // ✅ Update lastLogin timestamp
+    await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
 
-    if (user.role == 'Admin') {
-      return res.status(400).json({ message: 'Please Use Admin Login' });
-    }
+    const token = createJWT(user);
 
-    // Update last login timestamp
-    user.lastLogin = new Date();
-    await user.save();
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 3600000, // 1 hour
+    });
 
-    // Login successful, return the user data (without token)
-    res.status(200).json({ message: 'Login successful', user: user });
-  } catch (err) {
-    console.error('Login error:', err);
-    res.status(500).json({ message: 'Error during login. Please try again later.' });
+    res.status(200).json({ message: 'Login successful' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
-// adminLogin controller
+
+// Admin Login Controller
 const adminLogin = async (req, res) => {
-  const { email, password } = req.body;
-
   try {
-    // Find the user by email
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+    const { email, password } = req.body;
+    const admin = await User.findOne({ email, role: 'admin' }).select('+password');
+
+    if (!admin) {
+      return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    // Compare password (with hashing)
-    const isMatch = await bcrypt.compare(password, user.password);  
-    if (!isMatch) { 
-      return res.status(400).json({ message: 'Invalid credentials' });
+    const isMatch = await bcrypt.compare(password, admin.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    if (user.role !== "Admin") {
-      return res.status(400).json({ message: 'User not authorized' });
-    }
+    // ✅ Update lastLogin timestamp
+    await User.findByIdAndUpdate(admin._id, { lastLogin: new Date() });
 
-    // Update last login timestamp
-    user.lastLogin = new Date();
-    await user.save();
+    // Generate JWT
+    const token = createJWT(admin);
 
-    // Login successful, return the user data (without token)
-    res.status(200).json({ message: 'Login successful', user: user });
-  } catch (err) {
-    console.error('Login error:', err);
-    res.status(500).json({ message: 'Error during login. Please try again later.' });
+    // Set HTTP-only cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 3600000, // 1 hour
+    });
+
+    res.status(200).json({ message: 'Admin login successful' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
-// const resetPassword = async (req, res) => {
-//     try {
-//         const { email, securityquestion, securityanswer, firsttry, secondtry } = req.body;
+// User Signup Controller
+const signup = async (req, res) => {
+  try {
+    let { username, email, password } = req.body;
 
-//         const user = await User.findOne({ email });
+    // Trim inputs to remove accidental spaces
+    username = username?.trim();
+    email = email?.trim().toLowerCase(); // Convert email to lowercase for consistency
 
-//         if (!user) {
-//             return res.status(400).json({ error: 'User not found' });
-//         }
+    if (!username || !email || !password) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
 
-//         // Check if the provided security question and answer match
-//         // console.log(user.securityQuestion.question);
-//         // console.log(user.securityQuestion.answer);
-//         // console.log(securityquestion);
-//         // console.log(securityanswer);
-//         if (user.securityQuestion.question !== securityquestion || user.securityQuestion.answer !== securityanswer) {
-//             return res.status(400).json({ error: 'Incorrect security question or answer' });
-//         }
+    // Password regex: Minimum 8 chars, at least 1 uppercase, 1 lowercase, 1 number, and 1 special character
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({ 
+        message: 'Password must be at least 8 characters long, include 1 uppercase, 1 lowercase, 1 number, and 1 special character' 
+      });
+    }
 
-//         // Validate the passwords
-//         if (firsttry !== secondtry) {
-//             return res.status(400).json({ error: 'Passwords do not match' });
-//         }
+    // Check for existing user (case-insensitive)
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
 
-//         // Update the user's password
-//         user.password = firsttry;
-//         await user.save();
+    // Create user WITHOUT manual hashing
+    const newUser = new User({
+      username,
+      email,
+      password, // ✅ Directly assign plain password (pre-save hook will hash it)
+      role: 'user',
+      lastLogin: new Date(),
+    });
 
-//         res.status(200).json({ message: 'Password reset successful' });
-//     } catch (error) {
-//         console.error(error);
-//         res.status(500).json({ error: 'Internal server error' });
-//     }
-// };
+    await newUser.save();
 
+    const token = createJWT(newUser);
 
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 3600000, // 1 hour
+    });
 
-module.exports = {
-  signup,
-  login,
-  adminLogin,
-  // resetPassword,
+    res.status(201).json({ message: 'Signup successful, please log in' });
+
+  } catch (error) {
+    console.error('Signup Error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 };
+
+// Protected route to fetch user info
+const authMe = async (req, res) => {
+  try {
+    // `req.user` is already set by `authenticateUser` middleware
+    const user = await User.findById(req.user.userId).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ user });
+  } catch (error) {
+    console.error("Error in authMe:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+const logout = (req, res) => {
+  res.clearCookie("token", { httpOnly: true, secure: false, sameSite: "strict" });
+  return res.status(200).json({ message: "Logout successful" });
+};
+
+module.exports = { login, signup, adminLogin, authMe, logout };

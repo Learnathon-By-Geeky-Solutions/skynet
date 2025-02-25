@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import axios from "axios";
 import { 
   Users, 
   Home, 
@@ -17,11 +18,15 @@ const AdminSideBar = () => {
     // const [activeTab, setActiveTab] = useState('dashboard');
     const navigate = useNavigate(); 
 
-    const handleLogout = () => {
-        // Clear user data from localStorage
-        localStorage.removeItem('user');
-        navigate('/login'); // Redirect to login page after logout
-      };
+    // Logout function
+  const handleLogout = async () => {
+    try {
+      await axios.post("http://localhost:4000/api/auth/logout", {}, { withCredentials: true });
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout failed:", error.response?.data || error.message);
+    }
+  };
     return (
         <div className="w-64 bg-white shadow-md">
             <div className="p-4">
