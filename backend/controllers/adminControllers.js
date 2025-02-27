@@ -67,7 +67,7 @@ const postVendorRequests = async (req, res) => {
       }
 
       // Update user's pending status
-      await User.findByIdAndUpdate(requesterID, { pendingStatus: "pending" });
+      await User.findByIdAndUpdate(requesterID, { pendingStatus: "pending" }, {session});
 
       // Save vendor request
       const newRequest = new VendorRequest({ requesterID, message });

@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { User } = require('../models/userSchemas');
 const mongoose = require('mongoose');
+const validator = require("validator");
 
 function createJWT(user) {
   const payload = {
@@ -18,7 +19,7 @@ function createJWT(user) {
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!validator.isEmail(email)) {
       return res.status(400).json({ message: 'Invalid email format' });
     }
     const user = await User.findOne({ email }).select('+password'); // Ensure password is selected
