@@ -28,5 +28,5 @@ const requestSchema = new Schema({
   }
 });
 
-const VendorRequest = mongoose.model('Vendor_Request', requestSchema);
+const VendorRequest = mongoose.model('VendorRequest', requestSchema);
 module.exports = { VendorRequest };

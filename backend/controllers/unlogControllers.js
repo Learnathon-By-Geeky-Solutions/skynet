@@ -18,6 +18,9 @@ function createJWT(user) {
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
     const user = await User.findOne({ email }).select('+password'); // Ensure password is selected
 
     if (!user) {
@@ -157,7 +160,7 @@ const authMe = async (req, res) => {
 
 
 const logout = (req, res) => {
-  res.clearCookie("token", { httpOnly: true, secure: false, sameSite: "strict" });
+  res.clearCookie("token", { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: "strict" });
   return res.status(200).json({ message: "Logout successful" });
 };
 

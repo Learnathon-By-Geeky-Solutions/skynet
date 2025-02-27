@@ -9,6 +9,8 @@ const path = require('path');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
+// const lusca = require("lusca");
+const rateLimit = require("express-rate-limit");
 
 const unlogRoutes = require('./routes/unlogRoutes');
 const adminRoutes = require('./routes/adminRoutes');
@@ -21,6 +23,9 @@ const app = express();
 // Middleware
 app.use(express.json());
 app.use(cookieParser()); // Parse cookies
+
+// CSRF Middleware
+// app.use(lusca.csrf());
 app.use(morgan('dev'));
 
 // CORS Middleware (Allow frontend at port 5173)
@@ -33,6 +38,13 @@ app.use(cors({
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Credentials", "true");
   next();
+});
+
+// Define rate limiter
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.'
 });
 
 // JWT Token generation
@@ -87,12 +99,11 @@ passport.deserializeUser(async (id, done) => {
     done(err, null);
   }
 });
-
 // Google OAuth Routes
 app.get('/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 app.get(
-  "/auth/google/callback",
+  "/auth/google/callback", limiter,
   passport.authenticate("google", { failureRedirect: "/login", session: false }),
   async (req, res) => {
     if (!req.user) {
@@ -151,7 +162,7 @@ app.use('/api/user', authenticateJWT, userRoutes);  // Protected
 app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
 
 // Catch-all route for React
-app.get('*', (req, res) => {
+app.get('*', limiter, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'dist', 'index.html'));
 });
 

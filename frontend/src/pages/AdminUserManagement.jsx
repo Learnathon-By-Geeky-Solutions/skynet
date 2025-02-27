@@ -80,9 +80,9 @@ const UserManagementPage = () => {
                       <td className="px-6 py-4">
                         <span
                           className={`px-2 py-1 rounded-full text-xs ${
-                            user.role === "Admin"
+                            user.role === "admin"
                               ? "bg-red-100 text-red-800"
-                              : user.role === "Vendor"
+                              : user.role === "vendor"
                               ? "bg-blue-100 text-blue-800"
                               : "bg-green-100 text-green-800"
                           }`}

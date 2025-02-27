@@ -15,7 +15,7 @@ const router = express.Router();
 // Rate limiter for login & admin login
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5,
+    max: 100,
     handler: (req, res) => {
         res.set('Retry-After', Math.ceil(req.rateLimit.resetTime / 1000)); // Convert ms to seconds
         res.status(429).json({ message: 'Too many login attempts. Try again later.' });
@@ -52,7 +52,7 @@ const authenticateUser = (req, res, next) => {
   };
 
 
-router.get('/me', authenticateUser, authMe);
+router.get('/me', [loginLimiter, authenticateUser], authMe);
 
 
 // Logout Route (Clears JWT Cookie)

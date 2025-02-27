@@ -6,11 +6,15 @@ const jwt = require("jsonwebtoken");
 
 const getUsers = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const page = Number.parseInt(req.query.page) || 1;
+    const limit = Number.parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
     
-    const filter = req.query.role ? { role: req.query.role } : {};
+    const allowedRoles = ["admin", "vendor", "user"];
+    let filter = {};
+    if (req.query.role && allowedRoles.includes(req.query.role)) {
+      filter.role = req.query.role;
+    }
 
     const users = await User.find(filter)
       .select("username email role lastLogin")
