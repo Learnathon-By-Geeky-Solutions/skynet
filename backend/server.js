@@ -152,6 +152,16 @@ function authenticateJWT(req, res, next) {
   });
 }
 
+// Define rate limiting globally
+const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per window
+    message: 'Too many requests from this IP, please try again later.',
+    headers: true,
+});
+
+// Apply global rate limiter before all routes
+app.use(globalLimiter);
 
 // API routes (protected routes example)
 app.use('/api/auth', unlogRoutes);
