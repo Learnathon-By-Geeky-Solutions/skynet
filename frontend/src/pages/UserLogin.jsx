@@ -19,7 +19,9 @@ const UserLogin = () => {
     try {
       const response = await fetch('http://localhost:4000/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(formData),
         credentials: 'include', // Important for cookies
       });
@@ -27,6 +29,7 @@ const UserLogin = () => {
       const data = await response.json();
 
       if (response.ok) {
+        // localStorage.setItem('csrfToken', data.csrfToken);
         navigate('/'); // Redirect to home/dashboard
       } else {
         setError(data.message || 'Login failed');

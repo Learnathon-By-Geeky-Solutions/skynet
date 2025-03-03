@@ -10,6 +10,10 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 // const lusca = require("lusca");
+
+const Tokens = require("csrf");
+const tokens = new Tokens();
+
 const rateLimit = require("express-rate-limit");
 
 const unlogRoutes = require('./routes/unlogRoutes');
@@ -23,9 +27,6 @@ const app = express();
 // Middleware
 app.use(express.json());
 app.use(cookieParser()); // Parse cookies
-
-// CSRF Middleware
-// app.use(lusca.csrf());
 app.use(morgan('dev'));
 
 // CORS Middleware (Allow frontend at port 5173)
@@ -34,11 +35,19 @@ app.use(cors({
   credentials: true, // Allow cookies & authentication
 }));
 
-// Ensure Express allows credentials in responses
+
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Credentials", "true");
+  if (req.method === "GET") return next(); // Allow GET requests
+  const token = tokens.create(process.env.CSRF_SECRET || "default_secret");
+  res.cookie("XSRF-TOKEN", token, { httpOnly: false, sameSite: "Strict" });
+  req.csrfToken = token;
   next();
 });
+
+app.get("/api/csrf-token", (req, res) => {
+  res.json({ csrfToken: req.csrfToken });
+});
+
 
 // Define rate limiter
 const limiter = rateLimit({
@@ -121,7 +130,7 @@ app.get(
       res.cookie("token", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        sameSite: "Lax",
         maxAge: 3600000, // 1 hour
       });
 
@@ -176,6 +185,11 @@ app.get('*', limiter, (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'dist', 'index.html'));
 });
 
+if (!process.env.MONGO_URI) {
+  console.error("❌ MONGO_URI is missing in .env file!");
+  process.exit(1); // Exit with failure
+}
+
 // Connect to MongoDB and start server
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
@@ -186,6 +200,7 @@ mongoose.connect(process.env.MONGO_URI)
   .catch((err) => {
     console.log(err);
   });
+
 // STATIC FILES FOR IMAGE UPLOADS
 // app.use(morgan('dev'));
 // app.use(express.urlencoded({ extended:true }));
