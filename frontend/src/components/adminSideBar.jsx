@@ -31,7 +31,7 @@ const AdminSideBar = () => {
         <div className="w-64 bg-white shadow-md">
             <div className="p-4">
             <Link to="/admin/dashboard" 
-            className={`text-2xl font-bold text-blue-600 hover:underline ${location.pathname === '/admin/dashboard' ? 'bg-blue-50 text-blue-600' : 'bg-blue-50 text-blue-600'}`}
+            className="text-2xl font-bold text-blue-600 hover:underline bg-blue-50"
             >
                 Skynet
             </Link>

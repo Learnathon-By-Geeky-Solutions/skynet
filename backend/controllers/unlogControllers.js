@@ -19,17 +19,21 @@ function createJWT(user) {
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!validator.isEmail(email)) {
-      return res.status(400).json({ message: 'Invalid email format' });
+
+    if (typeof email !== "string" || !validator.isEmail(email.trim())) {
+      return res.status(400).json({ message: "Invalid email format" });
     }
-    const user = await User.findOne({ email }).select('+password'); // Ensure password is selected
+
+    const sanitizedEmail = email.trim();
+    const user = await User.findOne({ email: sanitizedEmail }).select("+password");
 
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: "Invalid credentials" });
     }
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
     // ✅ Update lastLogin timestamp
@@ -37,54 +41,63 @@ const login = async (req, res) => {
 
     const token = createJWT(user);
 
-    res.cookie('token', token, {
+    res.cookie("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'Lax',
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "Lax",
       maxAge: 3600000, // 1 hour
     });
 
-    res.status(200).json({ message: 'Login successful' });
+    res.status(200).json({ message: "Login successful" });
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-
-// Admin Login Controller
+// Admin Login
 const adminLogin = async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const admin = await User.findOne({ email, role: 'admin' }).select('+password');
+    let { email, password } = req.body;
+
+    if (typeof email !== "string" || !validator.isEmail(email.trim())) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    email = email.trim().toLowerCase(); // Trim and normalize email
+
+    if (typeof password !== "string" || password.length < 8) {
+      return res.status(400).json({ message: "Invalid password format" });
+    }
+
+    const admin = await User.findOne({ email, role: "admin" }).select("+password");
 
     if (!admin) {
-      return res.status(401).json({ message: 'Unauthorized' });
+      return res.status(401).json({ message: "Unauthorized" });
     }
 
     const isMatch = await bcrypt.compare(password, admin.password);
     if (!isMatch) {
-      return res.status(401).json({ message: 'Unauthorized' });
+      return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // ✅ Update lastLogin timestamp
     await User.findByIdAndUpdate(admin._id, { lastLogin: new Date() });
 
-    // Generate JWT
     const token = createJWT(admin);
 
-    // Set HTTP-only cookie
-    res.cookie('token', token, {
+    res.cookie("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'Lax',
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "Lax",
       maxAge: 3600000, // 1 hour
     });
 
-    res.status(200).json({ message: 'Admin login successful' });
+    res.status(200).json({ message: "Admin login successful" });
   } catch (error) {
-    res.status(500).json({ message: 'Server error' });
+    console.error("Admin Login Error:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
+
 
 // User Signup Controller
 const signup = async (req, res) => {

@@ -6,27 +6,30 @@ const jwt = require("jsonwebtoken");
 
 const getUsers = async (req, res) => {
   try {
-    const page = Number.parseInt(req.query.page) || 1;
-    const limit = Number.parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-    
+    const page = Number.isInteger(Number(req.query.page)) ? Number(req.query.page) : 1;
+    const limit = Number.isInteger(Number(req.query.limit)) ? Number(req.query.limit) : 10;
+    const skip = Math.max(0, (page - 1) * limit); // Ensure skip is non-negative
+
     const allowedRoles = ["admin", "vendor", "user"];
     let filter = {};
-    if (req.query.role && allowedRoles.includes(req.query.role)) {
-      filter.role = req.query.role;
+
+    if (req.query.role && allowedRoles.includes(req.query.role.toString())) {
+      filter.role = req.query.role.toString(); // Ensure role is a string
     }
 
     const users = await User.find(filter)
       .select("username email role lastLogin")
       .sort({ lastLogin: -1 })
       .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .lean(); // Use lean() to return plain JavaScript objects (better performance)
 
     res.json({ success: true, data: users });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 };
+
 
 
 const getVendorRequests = async (req, res) => {
