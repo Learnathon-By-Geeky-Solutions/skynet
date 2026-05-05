@@ -22,6 +22,10 @@ const userRoutes = require('./routes/userRoutes');
 const vendorRoutes = require('./routes/vendorRoutes');
 const { User } = require('./models/userSchemas');
 
+// Solve Node.js version 20 and later's issue of resolving DNS SRV records required to connect to mongodb
+const dns = require('node:dns');
+dns.setServers(['8.8.8.8', '8.8.4.4']); // Forcing Google's Public DNS
+
 // Express app
 const app = express();
 

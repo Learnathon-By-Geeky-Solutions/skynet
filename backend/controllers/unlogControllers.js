@@ -193,7 +193,7 @@ const authMe = async (req, res) => {
 
 
 const logout = (req, res) => {
-  res.clearCookie("token", { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: "None" });
+  res.clearCookie("token", { httpOnly: true, secure: process.env.NODE_ENV === 'production',  sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax", });
   return res.status(200).json({ message: "Logout successful" });
 };
 
@@ -300,7 +300,6 @@ const getProperties = async (req, res) => {
 
     // Fetch properties
     const properties = await Property.find(query).exec();
-
     res.json({ success: true, data: properties });
   } catch (error) {
       console.error('Error fetching properties:', error);
